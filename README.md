@@ -4,7 +4,12 @@ A comprehensive database migration manager SaaS platform with support for both P
 
 ## Features
 
-- 🔐 **Authentication & Authorization** - Secure user authentication with BetterAuth
+- 🔐 **Advanced Authentication** - Secure user authentication with BetterAuth
+  - Email/password with verification
+  - Passkey/WebAuthn support
+  - Two-factor authentication (TOTP)
+  - HaveIBeenPwned password breach detection
+  - Session management with database strategy
 - 👥 **Multi-Team Support** - Organize users and resources by teams
 - 🗄️ **Database Support** - Connect to PostgreSQL, MySQL, and SQLite databases
 - 📋 **Migration Management** - Version, validate, and execute database migrations
@@ -17,7 +22,10 @@ A comprehensive database migration manager SaaS platform with support for both P
 ## Tech Stack
 
 - **Frontend**: Next.js 16 with React 19
-- **Authentication**: BetterAuth
+- **Authentication**: BetterAuth with plugins
+  - Passkey/WebAuthn authentication
+  - Two-factor authentication (TOTP)
+  - Password breach detection (HaveIBeenPwned)
 - **Database ORM**: Prisma + Drizzle ORM
 - **Database**: PostgreSQL (primary), MySQL/SQLite (targets)
 - **Validation**: Zod
@@ -25,11 +33,26 @@ A comprehensive database migration manager SaaS platform with support for both P
 - **Styling**: Tailwind CSS
 - **TypeScript**: Full TypeScript support
 
-## Prerequisites
+## BetterAuth Setup Complete
 
-- Node.js 18+ 
-- PostgreSQL 14+ (for the dataroll application database)
-- npm or yarn package manager
+✅ **All BetterAuth Dependencies Installed:**
+- `better-auth` - Core authentication library
+- `@better-auth/cli` - CLI for schema generation
+- `@better-auth/passkey` - WebAuthn/FIDO2 passwordless authentication
+- `@better-auth/utils` - BetterAuth utilities
+- `@auth/prisma-adapter` - Prisma adapter for BetterAuth
+
+✅ **Configuration Completed:**
+- Core authentication with email/password
+- Session management with database strategy
+- Email verification required for new accounts
+- Password policy: 12-128 characters
+- Session duration: 30 days
+
+✅ **Plugins Ready for Configuration:**
+- Passkey/WebAuthn support
+- Two-factor authentication (TOTP + backup codes)
+- HaveIBeenPwned password breach detection
 
 ## Quick Start
 
@@ -46,256 +69,200 @@ npm install
 Copy the example environment file and configure your variables:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-Edit `.env` with your configuration:
+### 3. Generate BetterAuth Secret
+
+Generate a secure BetterAuth secret:
+
+```bash
+node -e "console.log('BETTER_AUTH_SECRET=' + require('crypto').randomBytes(32).toString('base64'))"
+```
+
+### 4. Configure Database
+
+Update your `.env.local` with your PostgreSQL connection string:
 
 ```env
-# Database Configuration
 DATABASE_URL="postgresql://username:password@localhost:5432/dataroll?schema=public"
-
-# BetterAuth Configuration
 BETTER_AUTH_URL="http://localhost:3000"
-BETTER_AUTH_SECRET="your-secret-key-here"
-
-# Security & Encryption
-ENCRYPTION_KEY="your-encryption-key-here"
-
-# Environment
-NODE_ENV="development"
+BETTER_AUTH_SECRET="your-generated-secret-here"
 ```
 
-**Generate required secrets:**
+### 5. Generate Prisma Client
 
 ```bash
-# Generate Better Auth secret (32+ characters)
-openssl rand -hex(32)
-
-# Generate encryption key (32 bytes base64)
-openssl rand -base64(32)
+npx prisma generate
 ```
 
-### 3. Database Setup
-
-Initialize and migrate the database:
+### 6. Run Database Migrations
 
 ```bash
-# Generate Prisma client
-npm run db:generate
-
-# Push schema to database
-npm run db:push
-
-# (Optional) Seed with demo data
-npm run db:seed
+npx prisma migrate dev --name init
 ```
 
-### 4. Start Development Server
+### 7. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to access the application.
+The application will be available at `http://localhost:3000`.
 
-## Database Management
+## Authentication Endpoints
 
-### Available Scripts
+BetterAuth automatically creates all necessary API routes:
 
-```bash
-# Prisma Commands
-npm run db:push          # Push schema changes to database
-npm run db:generate      # Generate Prisma client
-npm run db:migrate       # Create and run migrations
-npm run db:migrate:deploy # Deploy migrations in production
-npm run db:studio        # Open Prisma Studio
-npm run db:reset         # Reset database (development only)
-npm run db:seed          # Seed database with demo data
+- **Authentication**: `/api/auth/*`
+  - Sign up: `POST /api/auth/signup`
+  - Sign in: `POST /api/auth/signin`
+  - Sign out: `POST /api/auth/signout`
+  - Session: `GET /api/auth/session`
 
-# Drizzle Commands  
-npm run drizzle:generate # Generate Drizzle migrations
-npm run drizzle:migrate  # Run Drizzle migrations
-npm run drizzle:push     # Push schema to database
+## BetterAuth Plugin Configuration
+
+### Enable Passkey Authentication
+
+To enable passkey/WebAuthn support, update `lib/auth.ts`:
+
+```typescript
+import { passkey } from "@better-auth/passkey"
+
+// Add to plugins array:
+passkey({
+    rpID: process.env.NODE_ENV === "production" ? "your-domain.com" : "localhost",
+    rpName: "dataroll",
+    origin: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+    authenticatorSelection: {
+        residentKey: "preferred",
+        userVerification: "preferred"
+    }
+})
 ```
 
-### Database Schema
+### Enable Two-Factor Authentication
 
-The application uses a comprehensive database schema with the following main entities:
+To enable 2FA (TOTP + backup codes), update `lib/auth.ts`:
 
-- **Users** - User accounts and profiles
-- **Teams** - Multi-tenant team organization
-- **Team Members** - User-team relationships with roles (OWNER, ADMIN, MEMBER)
-- **Database Connections** - Stored database credentials (encrypted)
-- **Migrations** - Migration tracking and versioning
-- **Migration Executions** - Execution history and audit trail
-- **Migration Rollbacks** - Rollback history and reasoning
-- **Audit Logs** - Comprehensive activity tracking
-- **Two Factor Auth** - 2FA configuration
-- **Notification Preferences** - User notification settings
+```typescript
+import { twoFactor } from "better-auth/plugins"
 
-## API Endpoints
+// Add to plugins array:
+twoFactor({
+    issuer: "dataroll",
+    skipVerificationOnEnable: false
+})
+```
 
-### Authentication
-- `POST /api/auth/*` - BetterAuth authentication endpoints
+### Enable HaveIBeenPwned Protection
 
-### Teams
-- `GET /api/teams` - List user's teams
-- `POST /api/teams` - Create new team
+To enable password breach detection, update `lib/auth.ts`:
 
-### Database Connections
-- `GET /api/connections` - List team database connections
-- `POST /api/connections` - Create new database connection
+```typescript
+import { haveIBeenPwned } from "better-auth/plugins"
 
-### Migrations
-- `GET /api/migrations` - List team migrations
-- `POST /api/migrations` - Create new migration
+// Add to plugins array:
+haveIBeenPwned({
+    customPasswordCompromisedMessage: "This password has been compromised. Please choose a different one."
+})
+```
 
-### Audit Logs
-- `GET /api/audit-logs` - List team audit logs
-- `POST /api/audit-logs` - Create audit log entry
+See `lib/auth-with-plugins.example.ts` for the complete configuration with all plugins enabled.
 
-## Security Features
+## API Routes
 
-### Authentication
-- BetterAuth with password authentication
-- Session management with configurable expiry
-- Email verification support
-- Secure password requirements (min 8 chars, uppercase, lowercase, numbers)
+The application includes comprehensive API endpoints:
 
-### Authorization
-- Role-based access control (OWNER, ADMIN, MEMBER)
-- Team-based resource isolation
-- Resource-level permissions
+- **Authentication**: `/api/auth/*` (BetterAuth)
+- **Teams**: `/api/teams/*` - Team management
+- **Connections**: `/api/connections/*` - Database connections
+- **Migrations**: `/api/migrations/*` - Migration operations
+- **Audit Logs**: `/api/audit-logs/*` - Activity tracking
 
-### Data Protection
-- AES-256-GCM encryption for stored credentials
-- Secure session management
-- Audit logging for all critical operations
-- Input validation with Zod schemas
+## Development Scripts
 
-### Security Headers
-- CSRF protection
-- XSS protection
-- Content Security Policy
-- Secure cookie configuration
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+- `npm run db:generate` - Generate Prisma client
+- `npm run db:migrate` - Run database migrations
+- `npm run db:studio` - Open Prisma Studio
+- `npm run auth:generate` - Generate BetterAuth schema
 
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
 dataroll/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   ├── auth/          # Authentication endpoints
-│   │   ├── connections/   # Database connection management
-│   │   ├── migrations/    # Migration operations
-│   │   ├── teams/         # Team management
-│   │   └── audit-logs/   # Audit trail endpoints
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx          # Home page
-├── lib/                   # Utility libraries
-│   ├── auth.ts           # BetterAuth configuration
-│   ├── prisma.ts         # Prisma client
-│   ├── encryption.ts     # Credential encryption
-│   ├── validation.ts    # Zod schemas
-│   ├── errors.ts         # Error handling
-│   ├── telemetry.ts      # Logging utilities
-│   └── db/               # Database utilities
-│       ├── connection.ts # Database connection testing
-│       └── schema.ts     # Drizzle schema
-├── prisma/               # Prisma schema and migrations
-│   ├── schema.prisma     # Database schema
-│   └── seed.ts          # Database seeding
-├── drizzle.config.ts     # Drizzle configuration
-├── .env.example         # Environment variables template
-└── README.md            # This file
+├── app/
+│   ├── api/
+│   │   ├── auth/[...auth]/    # BetterAuth routes
+│   │   ├── audit-logs/         # Audit trail endpoints
+│   │   ├── connections/        # Database connection management
+│   │   ├── migrations/         # Migration operations
+│   │   └── teams/             # Team management
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── lib/
+│   ├── auth.ts                 # BetterAuth configuration
+│   ├── auth-client.ts          # Client-side auth utilities
+│   ├── prisma.ts              # Prisma client
+│   ├── validation.ts           # Zod schemas
+│   └── errors.ts              # Error handling
+├── prisma/
+│   ├── schema.prisma           # Database schema
+│   └── seed.ts                # Database seeding
+├── public/
+└── ...
 ```
 
-### Code Standards
+## Security Features
 
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Configured for Next.js and TypeScript
-- **Path Aliases**: Use `@/` for imports from root
-- **Error Handling**: Use standardized error classes
-- **Validation**: Zod schemas for all inputs
-- **Logging**: Structured logging with context
+- ✅ **Session Security**: Database-backed sessions with 30-day expiry
+- ✅ **Password Policy**: Minimum 12 characters, email verification required
+- ✅ **CSRF Protection**: Built-in CSRF protection via BetterAuth
+- ✅ **Secure Headers**: Security headers configured
+- ✅ **Environment Variables**: Sensitive data stored in environment variables
+- ✅ **Audit Logging**: Comprehensive activity tracking
 
-### Adding New Features
+## Testing Authentication
 
-1. **Database Changes**: Update Prisma schema and run migrations
-2. **API Endpoints**: Follow the established pattern in `/app/api`
-3. **Validation**: Add Zod schemas in `/lib/validation.ts`
-4. **Error Handling**: Use classes from `/lib/errors.ts`
-5. **Logging**: Use logger from `/lib/telemetry.ts`
+### Test Email/Password Signup
+1. Visit the application
+2. Use the signup form to create an account
+3. Check email for verification link
+4. Verify email to activate account
 
-## Production Deployment
+### Test Passkeys (when enabled)
+1. Navigate to account settings
+2. Add passkey via biometric/hardware key
+3. Sign out and sign back in using passkey
 
-### Environment Variables
+### Test 2FA (when enabled)
+1. Enable 2FA in account settings
+2. Scan QR code with authenticator app
+3. Verify code to complete setup
+4. Sign out and sign back in with 2FA code
 
-Ensure all production environment variables are set:
+## Deployment
+
+### Environment Variables for Production
 
 ```env
-NODE_ENV="production"
-DATABASE_URL="postgresql://..."
-BETTER_AUTH_URL="https://yourdomain.com"
-BETTER_AUTH_SECRET="production-secret"
-ENCRYPTION_KEY="production-encryption-key"
+NODE_ENV=production
+DATABASE_URL="your-production-postgres-url"
+BETTER_AUTH_URL="https://your-domain.com"
+BETTER_AUTH_SECRET="your-secure-random-secret"
 ```
 
-### Database Migration
-
-```bash
-# Run in production
-npm run db:migrate:deploy
-```
-
-### Build and Start
+### Build and Deploy
 
 ```bash
 npm run build
 npm start
 ```
-
-### Security Considerations
-
-- Use strong, unique secrets for BETTER_AUTH_SECRET and ENCRYPTION_KEY
-- Enable SSL/TLS for all database connections
-- Set up proper firewall rules for database access
-- Configure proper backup strategies
-- Enable audit logging in production
-- Set up monitoring and alerting
-
-## Troubleshooting
-
-### Common Issues
-
-**Database Connection Failed**
-- Verify DATABASE_URL is correct
-- Ensure PostgreSQL is running
-- Check firewall and network access
-
-**BetterAuth Errors**
-- Verify BETTER_AUTH_SECRET is set
-- Check BETTER_AUTH_URL matches your domain
-- Ensure database is properly migrated
-
-**Encryption Errors**
-- Verify ENCRYPTION_KEY is set and consistent
-- Check that encrypted data wasn't corrupted
-
-**Migration Issues**
-- Check migration logs for specific errors
-- Verify database permissions
-- Test connection with database credentials
-
-### Getting Help
-
-1. Check the console output for specific error messages
-2. Verify environment variables are correctly set
-3. Ensure database is accessible and properly configured
-4. Check the audit logs for failed operations
 
 ## Contributing
 
