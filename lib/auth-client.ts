@@ -128,8 +128,8 @@ export function isTeamMember(user: AuthUser | null, teamId: string): boolean {
 // Format user display name
 export function formatUserName(user: AuthUser): string {
   if (user.name) return user.name
-  if (user.email !== undefined && user.email !== null) {
-    return user.email.split('@')[0]
+  if (user.email != null) {
+    return String(user.email).split('@')[0]
   }
   return 'User'
 }

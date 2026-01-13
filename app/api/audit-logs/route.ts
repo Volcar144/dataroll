@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { 
   AuditLogSchema,
@@ -13,7 +13,7 @@ import { formatError } from '@/lib/errors'
 export async function GET(request: NextRequest) {
   let session: any = null
   try {
-    session = await auth()
+    session = await getSession()
     if (!session?.user) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let session: any = null
   try {
-    session = await auth()
+    session = await getSession()
     if (!session?.user) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
