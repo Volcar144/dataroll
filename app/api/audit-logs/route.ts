@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { 
-  AuditLogSchema,
-  PaginationSchema,
-  ApiResponseSchema
+  AuditLogSchema
 } from '@/lib/validation'
 import { logger } from '@/lib/telemetry'
 import { formatError } from '@/lib/errors'
 
 // GET /api/audit-logs - List audit logs for a team
 export async function GET(request: NextRequest) {
-  let session: any = null
+  let session: Awaited<ReturnType<typeof getSession>> | null = null
   try {
     session = await getSession()
     if (!session?.user) {

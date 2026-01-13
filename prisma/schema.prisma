@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// BetterAuth Models
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -19,7 +20,6 @@ model User {
   // BetterAuth relations
   accounts Account[]
   sessions Session[]
-  verificationTokens VerificationToken[]
 
   // dataroll specific relations
   teamMembers       TeamMember[]
@@ -28,6 +28,7 @@ model User {
   migrations        Migration[]
   auditLogs         AuditLog[]
   notificationPreferences NotificationPreferences?
+  twoFactorAuth     TwoFactorAuth?
 
   @@map("users")
 }
@@ -71,6 +72,7 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// dataroll-specific models
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -258,6 +260,8 @@ model TwoFactorAuth {
   backupCodes String[] @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("two_factor_auth")
 }
