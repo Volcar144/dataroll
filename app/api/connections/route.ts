@@ -16,7 +16,7 @@ import { formatError } from '@/lib/errors'
 export async function GET(request: NextRequest) {
   let session: any = null
   try {
-    session = await getSession()
+    session = await getSession(request)
     if (!session?.user) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let session: any = null
   try {
-    session = await getSession()
+    session = await getSession(request)
     if (!session?.user) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },

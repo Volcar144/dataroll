@@ -16,6 +16,7 @@ export interface LogEntry {
   requestId?: string
   userId?: string
   teamId?: string
+  [key: string]: any // Allow additional properties
 }
 
 export class Logger {
@@ -203,14 +204,15 @@ export const migrationLogger = {
     logger.info('Migration created', { migrationId, version }, context)
   },
   executed: (migrationId: string, duration: number, success: boolean, context?: Partial<LogEntry>) => {
+    const data = { migrationId, duration, ...(context?.data || {}) }
     if (success) {
-      logger.info('Migration executed successfully', { migrationId, duration }, context)
+      logger.info('Migration executed successfully', data, context)
     } else {
-      logger.error('Migration execution failed', undefined, { migrationId, duration }, context)
+      logger.error('Migration execution failed', undefined, data, context)
     }
   },
   rolledBack: (migrationId: string, reason: string, context?: Partial<LogEntry>) => {
-    logger.info('Migration rolled back', { migrationId, reason }, context)
+    logger.info('Migration rolled back', { migrationId, reason, ...(context?.data || {}) }, context)
   },
 }
 

@@ -142,11 +142,16 @@ export const CreateMigrationSchema = z.object({
 export const ExecuteMigrationSchema = z.object({
   migrationId: z.string().cuid(),
   dryRun: z.boolean().default(false),
+  checksum: z.string().optional(),
+  teamId: z.string().cuid().optional(),
 })
 
 export const RollbackMigrationSchema = z.object({
   migrationId: z.string().cuid(),
   reason: z.string().optional(),
+  force: z.boolean().default(false),
+  createBackup: z.boolean().default(true),
+  teamId: z.string().cuid().optional(),
 })
 
 // Audit log schemas
