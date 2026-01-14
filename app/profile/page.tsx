@@ -11,7 +11,7 @@ interface Organization {
   slug: string
   createdAt: Date
   logo?: string | null
-  metadata?: any
+  metadata?: unknown
 }
 
 export default function Profile() {
@@ -24,6 +24,8 @@ export default function Profile() {
   const [activeOrganization, setActiveOrganization] = useState<string | null>(null)
   const [newOrgName, setNewOrgName] = useState("")
   const [newOrgSlug, setNewOrgSlug] = useState("")
+  const [passkeyName, setPasskeyName] = useState("")
+  const [showPasskeyInput, setShowPasskeyInput] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -91,7 +93,7 @@ export default function Profile() {
       setTwoFactorEnabled(false)
       setPassword("")
       setShowPasswordInput(false)
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to disable 2FA")
     } finally {
       setLoading(false)
@@ -99,13 +101,17 @@ export default function Profile() {
   }
 
   const handleAddPasskey = async () => {
+    if (!passkeyName.trim()) {
+      setShowPasskeyInput(true)
+      return
+    }
+
     setLoading(true)
     setError("")
     setSuccess("")
 
     try {
-      // Use a default name for now, in a real app you'd prompt the user
-      const result = await AuthService.addPasskey("My Passkey")
+      const result = await AuthService.addPasskey(passkeyName.trim())
 
       if (!result.success) {
         setError(result.error || "Failed to add passkey")
@@ -113,6 +119,8 @@ export default function Profile() {
       }
 
       setSuccess("Passkey added successfully!")
+      setPasskeyName("")
+      setShowPasskeyInput(false)
       // Reload passkeys list
       loadPasskeys()
     } catch (_err) {
@@ -284,17 +292,45 @@ export default function Profile() {
           </p>
 
           <div className="space-y-4">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Passkey management will be available after signing in.
-            </p>
+            {showPasskeyInput && (
+              <div>
+                <label htmlFor="passkeyName" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Passkey Name
+                </label>
+                <input
+                  id="passkeyName"
+                  type="text"
+                  value={passkeyName}
+                  onChange={(e) => setPasskeyName(e.target.value)}
+                  className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  placeholder="Enter a name for your passkey (e.g., 'My Laptop')"
+                  autoFocus
+                />
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  Choose a descriptive name to identify this passkey later.
+                </p>
+              </div>
+            )}
 
             <button
               onClick={handleAddPasskey}
               disabled={loading}
               className="w-full px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              {loading ? "Adding Passkey..." : "Add New Passkey"}
+              {loading ? "Adding Passkey..." : showPasskeyInput ? "Register Passkey" : "Add New Passkey"}
             </button>
+
+            {showPasskeyInput && (
+              <button
+                onClick={() => {
+                  setShowPasskeyInput(false)
+                  setPasskeyName("")
+                }}
+                className="w-full px-4 py-2 bg-zinc-100 text-zinc-900 rounded-md hover:bg-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
 

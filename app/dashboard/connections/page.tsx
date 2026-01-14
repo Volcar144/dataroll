@@ -57,10 +57,7 @@ export default function ConnectionsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: connection.type,
-          host: connection.host,
-          database: connection.database,
-          // Note: In a real app, you'd decrypt the credentials here
+          connectionId: connection.id,
         }),
       })
 

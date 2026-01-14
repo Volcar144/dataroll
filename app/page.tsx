@@ -3,7 +3,6 @@
 import { useSession } from "@/lib/auth-service"
 import { signOut } from "@/lib/auth-client"
 import Link from "next/link"
-import { AuthService } from "@/lib/auth-service"
 
 export default function Home() {
   const { data: session, isPending } = useSession()
@@ -94,7 +93,7 @@ export default function Home() {
             Welcome back, {session.user.name || session.user.email}!
           </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            You're successfully authenticated with DataRoll
+            You&apos;re successfully authenticated with DataRoll
           </p>
           <div className="mt-8 space-y-4">
             <div className="text-sm text-zinc-600 dark:text-zinc-400">

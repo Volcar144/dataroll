@@ -1,4 +1,4 @@
-import { authClient, signIn, signUp, useSession, passkey, twoFactor, organization } from "@/lib/auth-client"
+import { authClient, signUp, useSession } from "@/lib/auth-client"
 import { z } from "zod"
 
 // Validation schemas for authentication

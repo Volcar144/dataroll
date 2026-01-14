@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { DatabaseConnectionService, ConnectionTestSchema } from '@/lib/database-connection'
+import { DatabaseConnectionService } from '@/lib/database-connection'
+import { prisma } from '@/lib/prisma'
+import { decryptCredentials } from '@/lib/encryption'
 import { ApiResponseSchema } from '@/lib/validation'
 import { logger } from '@/lib/telemetry'
 import { formatError } from '@/lib/errors'
@@ -18,22 +20,67 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const validatedData = ConnectionTestSchema.parse(body)
+    const { connectionId } = body
+
+    if (!connectionId) {
+      return NextResponse.json(
+        { error: { code: 'BAD_REQUEST', message: 'Connection ID is required' } },
+        { status: 400 }
+      )
+    }
+
+    // Fetch the connection and verify access
+    const connection = await prisma.databaseConnection.findFirst({
+      where: {
+        id: connectionId,
+        team: {
+          members: {
+            some: {
+              userId: session.user.id,
+            },
+          },
+        },
+      },
+    })
+
+    if (!connection) {
+      return NextResponse.json(
+        { error: { code: 'NOT_FOUND', message: 'Connection not found or access denied' } },
+        { status: 404 }
+      )
+    }
+
+    // Decrypt the credentials
+    const decryptedCredentials = await decryptCredentials(
+      connection.password,
+      process.env.ENCRYPTION_KEY || 'default-encryption-key'
+    )
+
+    const testData = {
+      type: connection.type,
+      host: connection.host,
+      port: connection.port || undefined,
+      database: connection.database,
+      username: decryptedCredentials.username || connection.username,
+      password: decryptedCredentials.password,
+      ssl: connection.ssl,
+      url: connection.url || undefined,
+    }
 
     logger.info('Testing database connection', {
       userId: session.user.id,
-      databaseType: validatedData.type,
-      host: validatedData.host,
-      database: validatedData.database,
+      connectionId,
+      databaseType: testData.type,
     })
 
     // Test the connection
-    const result = await DatabaseConnectionService.testConnection(validatedData)
+    const result = await DatabaseConnectionService.testConnection(testData)
 
     if (result.success) {
       logger.info('Database connection test successful', {
         userId: session.user.id,
-        databaseType: validatedData.type,
+        connectionId,
+        databaseType: testData.type,
         latency: result.latency,
       })
 
@@ -47,7 +94,8 @@ export async function POST(request: NextRequest) {
     } else {
       logger.warn('Database connection test failed', {
         userId: session.user.id,
-        databaseType: validatedData.type,
+        connectionId,
+        databaseType: testData.type,
         error: result.error,
       })
 
