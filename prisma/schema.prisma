@@ -30,6 +30,11 @@ model User {
   notificationPreferences NotificationPreferences?
   twoFactorAuth     TwoFactorAuth?
   passkeyCredentials PasskeyCredential[]
+  teamInvitations   TeamInvitation[]  @relation("UserInvitations")
+  requestedApprovals MigrationApproval[] @relation("ApprovalRequester")
+  givenApprovals    MigrationApproval[] @relation("ApprovalApprover")
+  scheduledExecutions ScheduledExecution[]
+  webhooks          Webhook[]             @relation("UserWebhooks")
 
   @@map("users")
 }
@@ -88,6 +93,10 @@ model Team {
   databaseConnections DatabaseConnection[]
   migrations Migration[]
   auditLogs AuditLog[]
+  invitations TeamInvitation[]
+  permissions TeamPermission[]
+  webhooks Webhook[]
+  scheduledExecutions ScheduledExecution[]
 
   @@map("teams")
 }
@@ -113,6 +122,154 @@ enum TeamRole {
   MEMBER
 }
 
+enum Permission {
+  // Team management
+  TEAM_MANAGE
+  TEAM_INVITE
+  TEAM_REMOVE_MEMBER
+  
+  // Database connections
+  CONNECTION_CREATE
+  CONNECTION_UPDATE
+  CONNECTION_DELETE
+  CONNECTION_TEST
+  
+  // Migrations
+  MIGRATION_CREATE
+  MIGRATION_EXECUTE
+  MIGRATION_ROLLBACK
+  MIGRATION_APPROVE
+  
+  // Audit
+  AUDIT_VIEW
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum Environment {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+}
+
+model TeamInvitation {
+  id          String   @id @default(cuid())
+  teamId      String
+  email       String
+  role        TeamRole
+  invitedById String
+  token       String   @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedBy User @relation("UserInvitations", fields: [invitedById], references: [id])
+
+  @@map("team_invitations")
+}
+
+model TeamPermission {
+  id         String   @id @default(cuid())
+  teamId     String
+  role       TeamRole
+  permission Permission
+  createdAt  DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, role, permission])
+  @@map("team_permissions")
+}
+
+model MigrationApproval {
+  id            String   @id @default(cuid())
+  migrationId   String
+  requestedById String
+  approvedById  String?
+  status        ApprovalStatus @default(PENDING)
+  comments      String?
+  approvedAt    DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  migration   Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  requestedBy User      @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  approvedBy  User?     @relation("ApprovalApprover", fields: [approvedById], references: [id])
+
+  @@map("migration_approvals")
+}
+
+model ScheduledExecution {
+  id            String   @id @default(cuid())
+  migrationId   String
+  teamId        String
+  databaseConnectionId String
+  scheduledById String
+  scheduledFor  DateTime
+  executedAt    DateTime?
+  status        ExecutionStatus @default(PENDING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  databaseConnection DatabaseConnection @relation(fields: [databaseConnectionId], references: [id], onDelete: Cascade)
+  scheduledBy User @relation(fields: [scheduledById], references: [id])
+
+  @@unique([migrationId, scheduledFor])
+  @@map("scheduled_executions")
+}
+
+model Webhook {
+  id          String   @id @default(cuid())
+  teamId      String
+  name        String
+  url         String
+  secret      String
+  events      String[] // JSON array of events to trigger on
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy User @relation("UserWebhooks", fields: [createdById], references: [id])
+  deliveries WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  event      String
+  payload    String   @db.Text
+  response   String?  @db.Text
+  statusCode Int?
+  success    Boolean  @default(false)
+  deliveredAt DateTime?
+  createdAt  DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_deliveries")
+}
+
 model DatabaseConnection {
   id           String   @id @default(cuid())
   name         String
@@ -124,6 +281,8 @@ model DatabaseConnection {
   password    String   // encrypted
   ssl         Boolean  @default(false)
   url         String?  // direct connection string
+  environment Environment @default(DEVELOPMENT)
+  requiresApproval Boolean @default(false)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -133,6 +292,7 @@ model DatabaseConnection {
   team      Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
   createdBy User          @relation(fields: [createdById], references: [id])
   migrations Migration[]
+  scheduledExecutions ScheduledExecution[]
 
   @@map("database_connections")
 }
@@ -152,6 +312,7 @@ model Migration {
   content     String            @db.Text
   status      MigrationStatus   @default(PENDING)
   checksum    String?
+  notes       String?           @db.Text
   executedAt  DateTime?
   rolledBackAt DateTime?
   createdAt   DateTime          @default(now())
@@ -165,6 +326,8 @@ model Migration {
   createdBy          User               @relation(fields: [createdById], references: [id])
   executions         MigrationExecution[]
   rollbacks          MigrationRollback[]
+  approvals          MigrationApproval[]
+  scheduledExecutions ScheduledExecution[]
 
   @@unique([teamId, version, databaseConnectionId])
   @@map("migrations")
@@ -199,6 +362,7 @@ model MigrationExecution {
 }
 
 enum ExecutionStatus {
+  PENDING
   SUCCESS
   FAILURE
   ROLLBACK
