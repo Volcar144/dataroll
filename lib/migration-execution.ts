@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma';
 import { DatabaseConnectionService } from '@/lib/database-connection';
 
 export interface MigrationExecutionResult {
@@ -18,17 +17,15 @@ export async function executeMigration(
   const startTime = Date.now();
 
   try {
-    const connectionService = new DatabaseConnectionService();
-
     switch (migration.type) {
       case 'PRISMA':
-        return await executePrismaMigration(migration, connectionService, dryRun);
+        return await executePrismaMigration(migration, dryRun);
 
       case 'DRIZZLE':
-        return await executeDrizzleMigration(migration, connectionService, dryRun);
+        return await executeDrizzleMigration(migration, dryRun);
 
       case 'RAW_SQL':
-        return await executeRawSqlMigration(migration, connectionService, dryRun);
+        return await executeRawSqlMigration(migration, dryRun);
 
       default:
         throw new Error(`Unsupported migration type: ${migration.type}`);
@@ -45,39 +42,41 @@ export async function executeMigration(
 
 async function executePrismaMigration(
   migration: any,
-  connectionService: DatabaseConnectionService,
   dryRun: boolean
 ): Promise<MigrationExecutionResult> {
   const startTime = Date.now();
 
   try {
-    // Get database connection
-    const connection = await connectionService.getConnection(migration.databaseConnectionId);
-
     if (dryRun) {
-      // For dry run, parse the migration and show what would be executed
-      const changes = parsePrismaMigration(migration.content);
       const duration = Date.now() - startTime;
-
       return {
         success: true,
         duration,
-        changes,
+        changes: [`Would execute Prisma migration: ${migration.name}`],
       };
     }
 
-    // Execute the migration
-    const client = await connectionService.createClient(connection);
-    await client.query(migration.content);
-    await connectionService.closeClient(client);
+    const result = await DatabaseConnectionService.executeQuery(
+      migration.databaseConnection,
+      migration.content,
+      migration.databaseConnectionId
+    );
 
     const duration = Date.now() - startTime;
 
-    return {
-      success: true,
-      duration,
-      changes: ['Migration executed successfully'],
-    };
+    if (result.success) {
+      return {
+        success: true,
+        duration,
+        changes: result.changes || [`Migration executed successfully`],
+      };
+    } else {
+      return {
+        success: false,
+        duration,
+        error: result.error,
+      };
+    }
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
@@ -90,39 +89,41 @@ async function executePrismaMigration(
 
 async function executeDrizzleMigration(
   migration: any,
-  connectionService: DatabaseConnectionService,
   dryRun: boolean
 ): Promise<MigrationExecutionResult> {
   const startTime = Date.now();
 
   try {
-    // Get database connection
-    const connection = await connectionService.getConnection(migration.databaseConnectionId);
-
     if (dryRun) {
-      // For dry run, parse the migration and show what would be executed
-      const changes = parseDrizzleMigration(migration.content);
       const duration = Date.now() - startTime;
-
       return {
         success: true,
         duration,
-        changes,
+        changes: [`Would execute Drizzle migration: ${migration.name}`],
       };
     }
 
-    // Execute the migration
-    const client = await connectionService.createClient(connection);
-    await client.query(migration.content);
-    await connectionService.closeClient(client);
+    const result = await DatabaseConnectionService.executeQuery(
+      migration.databaseConnection,
+      migration.content,
+      migration.databaseConnectionId
+    );
 
     const duration = Date.now() - startTime;
 
-    return {
-      success: true,
-      duration,
-      changes: ['Migration executed successfully'],
-    };
+    if (result.success) {
+      return {
+        success: true,
+        duration,
+        changes: result.changes || [`Migration executed successfully`],
+      };
+    } else {
+      return {
+        success: false,
+        duration,
+        error: result.error,
+      };
+    }
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
@@ -135,83 +136,47 @@ async function executeDrizzleMigration(
 
 async function executeRawSqlMigration(
   migration: any,
-  connectionService: DatabaseConnectionService,
   dryRun: boolean
 ): Promise<MigrationExecutionResult> {
   const startTime = Date.now();
 
   try {
-    // Get database connection
-    const connection = await connectionService.getConnection(migration.databaseConnectionId);
-
     if (dryRun) {
-      // For dry run, split SQL statements and show preview
-      const statements = migration.content
-        .split(';')
-        .map((stmt: string) => stmt.trim())
-        .filter((stmt: string) => stmt.length > 0);
-
       const duration = Date.now() - startTime;
-
       return {
         success: true,
         duration,
-        changes: statements.slice(0, 5).map((stmt: string) => stmt.substring(0, 100) + (stmt.length > 100 ? '...' : '')),
+        changes: [`Would execute SQL migration: ${migration.name}`],
       };
     }
 
-    // Execute the migration
-    const client = await connectionService.createClient(connection);
-    await client.query(migration.content);
-    await connectionService.closeClient(client);
+    const result = await DatabaseConnectionService.executeQuery(
+      migration.databaseConnection,
+      migration.content,
+      migration.databaseConnectionId
+    );
 
     const duration = Date.now() - startTime;
 
-    return {
-      success: true,
-      duration,
-      changes: ['SQL migration executed successfully'],
-    };
+    if (result.success) {
+      return {
+        success: true,
+        duration,
+        changes: result.changes || [`Migration executed successfully`],
+      };
+    } else {
+      return {
+        success: false,
+        duration,
+        error: result.error,
+      };
+    }
   } catch (error) {
     const duration = Date.now() - startTime;
     return {
       success: false,
       duration,
-      error: error instanceof Error ? error.message : 'Failed to execute SQL migration',
+      error: error instanceof Error ? error.message : 'Failed to execute raw SQL migration',
     };
   }
-}
-
-function parsePrismaMigration(content: string): string[] {
-  // Simple parsing for Prisma migrations
-  const lines = content.split('\n');
-  const changes: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('import')) {
-      if (trimmed.includes('model ') || trimmed.includes('enum ') || trimmed.includes('@@')) {
-        changes.push(trimmed);
-      }
-    }
-  }
-
-  return changes.length > 0 ? changes : ['Migration changes preview not available'];
-}
-
-function parseDrizzleMigration(content: string): string[] {
-  // Simple parsing for Drizzle migrations
-  const lines = content.split('\n');
-  const changes: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('import')) {
-      if (trimmed.includes('table(') || trimmed.includes('sql`') || trimmed.includes('db.')) {
-        changes.push(trimmed);
-      }
-    }
-  }
-
-  return changes.length > 0 ? changes : ['Migration changes preview not available'];
 }
