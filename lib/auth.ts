@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { passkey } from "@better-auth/passkey"
-import { twoFactor, haveIBeenPwned, organization } from "better-auth/plugins"
+import { twoFactor, haveIBeenPwned, organization, deviceAuthorization, apiKey } from "better-auth/plugins"
 import { prisma } from "@/lib/prisma"
 
 // Initialize BetterAuth with comprehensive configuration
@@ -78,6 +78,17 @@ export const auth = betterAuth({
                 maximumTeams: 10,
                 allowRemovingAllTeams: false
             }
+        }),
+
+        // Device authorization for CLI login
+        deviceAuthorization({
+            verificationUri: "/device",
+        }),
+
+        // API key management for CLI authentication
+        apiKey({
+            enableSessionForAPIKeys: true,
+            defaultPrefix: "dataroll_",
         })
     ],
     

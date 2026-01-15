@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { 
-  CreateDatabaseConnectionSchema, 
+import {
+  CreateDatabaseConnectionSchema,
   UpdateDatabaseConnectionSchema,
   TestConnectionSchema,
   ApiResponseSchema,
@@ -11,6 +11,7 @@ import {
 import { encryptCredentials } from '@/lib/encryption'
 import { logger, securityLogger } from '@/lib/telemetry'
 import { formatError } from '@/lib/errors'
+import { getPostHogClient } from '@/lib/posthog-server'
 
 // GET /api/connections - List database connections for current user's team
 export async function GET(request: NextRequest) {
@@ -161,6 +162,20 @@ export async function POST(request: NextRequest) {
     }, {
       userId: session.user.id,
       teamId: validatedData.teamId,
+    })
+
+    // Track connection created event in PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'connection_created',
+      properties: {
+        connection_id: connection.id,
+        connection_name: connection.name,
+        connection_type: connection.type,
+        team_id: validatedData.teamId,
+        source: 'api',
+      },
     })
 
     const response = {

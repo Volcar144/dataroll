@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission, Permission } from "@/lib/permissions";
 import { headers } from "next/headers";
 import crypto from "crypto";
+import { emailService } from "@/lib/email";
 
 /**
  * POST /api/teams/[teamId]/invitations
@@ -99,7 +100,23 @@ export async function POST(
       },
     });
 
-    // TODO: Send invitation email with link containing token
+    // Send invitation email
+    if (emailService) {
+      const invitationUrl = `${process.env.BETTER_AUTH_URL || 'http://localhost:3000'}/teams/invitations/accept/${invitation.token}`;
+      const inviter = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, email: true },
+      });
+
+      await emailService.sendTeamInvitationEmail(
+        email,
+        inviter?.name || inviter?.email || 'A team member',
+        team.name,
+        invitationUrl
+      );
+    } else {
+      console.warn('Email service not configured - invitation email not sent');
+    }
 
     return Response.json(
       {

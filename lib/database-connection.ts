@@ -1,7 +1,9 @@
 import { Client as PostgresClient } from 'pg'
+import { prisma } from "@/lib/prisma";
 import mysql from 'mysql2/promise'
 import Database from 'better-sqlite3'
 import { z } from 'zod'
+import { recordDatabaseError } from "@/lib/database-monitoring";
 
 // Connection test schemas
 export const ConnectionTestSchema = z.object({
@@ -13,6 +15,7 @@ export const ConnectionTestSchema = z.object({
   password: z.string().optional(),
   ssl: z.boolean().default(false),
   url: z.string().optional(),
+  connectionId: z.string().optional(), // For error recording
 })
 
 export type ConnectionTestData = z.infer<typeof ConnectionTestSchema>
@@ -42,10 +45,23 @@ export class DatabaseConnectionService {
           return { success: false, error: 'Unsupported database type' }
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Connection test failed'
+      const latency = Date.now() - startTime
+
+      // Record error if connectionId is provided
+      if (data.connectionId) {
+        await recordDatabaseError({
+          connectionId: data.connectionId,
+          operation: 'connection_test',
+          errorType: 'connection_failed',
+          message: errorMessage,
+        }).catch(console.error) // Don't throw if error recording fails
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed',
-        latency: Date.now() - startTime
+        error: errorMessage,
+        latency
       }
     }
   }
@@ -53,7 +69,8 @@ export class DatabaseConnectionService {
   // Execute a query on a database connection
   static async executeQuery(
     connection: any,
-    query: string
+    query: string,
+    connectionId?: string
   ): Promise<{ success: boolean; error?: string; changes?: string[]; rowCount?: number }> {
     try {
       switch (connection.type) {
@@ -67,9 +84,22 @@ export class DatabaseConnectionService {
           return { success: false, error: 'Unsupported database type' }
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Query execution failed'
+
+      // Record error if connectionId is provided
+      if (connectionId) {
+        await recordDatabaseError({
+          connectionId,
+          operation: 'query_execution',
+          errorType: 'query_error',
+          message: errorMessage,
+          details: query,
+        }).catch(console.error) // Don't throw if error recording fails
+      }
+
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Query execution failed',
+        error: errorMessage,
       }
     }
   }

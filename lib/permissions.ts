@@ -77,6 +77,16 @@ const ROLE_PERMISSIONS: Record<TeamRole, Permission[]> = {
     Permission.VIEW_MIGRATION_DETAILS,
     Permission.VIEW_AUDIT_LOGS,
   ],
+  MEMBER: [
+    Permission.CREATE_CONNECTION,
+    Permission.VIEW_CONNECTION_DETAILS,
+    Permission.TEST_CONNECTION,
+    Permission.CREATE_MIGRATION,
+    Permission.EXECUTE_MIGRATION,
+    Permission.SCHEDULE_MIGRATION,
+    Permission.VIEW_MIGRATION_DETAILS,
+    Permission.VIEW_AUDIT_LOGS,
+  ],
 };
 
 /**

@@ -243,7 +243,7 @@ async function rollbackRawSqlMigration(
     }
 
     // Execute the rollback SQL
-    await DatabaseConnectionService.executeQuery(migration.databaseConnection, rollbackSql)
+    await DatabaseConnectionService.executeQuery(migration.databaseConnection, rollbackSql, migration.databaseConnectionId)
 
     return {
       success: true,
@@ -271,7 +271,7 @@ async function forceRollbackMigration(
     const rollbackSql = generateForcedRollbackSql(migration.content)
 
     if (rollbackSql) {
-      await DatabaseConnectionService.executeQuery(migration.databaseConnection, rollbackSql)
+      await DatabaseConnectionService.executeQuery(migration.databaseConnection, rollbackSql, migration.databaseConnectionId)
     }
 
     return {

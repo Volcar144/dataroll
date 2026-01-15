@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { triggerWebhook } from "@/lib/webhooks";
 import { createAuditLog } from "@/lib/audit";
+import { executeMigration } from "@/lib/migration-execution";
 
 export interface ScheduleMigrationOptions {
   migrationId: string;
@@ -200,19 +201,53 @@ export async function processPendingScheduledExecutions(): Promise<void> {
   for (const execution of pendingExecutions) {
     try {
       // Execute migration
-      // TODO: Integrate with actual migration execution logic
-      console.log(
-        `Processing scheduled execution: ${execution.id} for migration ${execution.migrationId}`
-      );
+      const result = await executeMigration(execution.migration, false);
 
-      // For now, mark as success
-      await prisma.scheduledExecution.update({
-        where: { id: execution.id },
-        data: {
-          status: "SUCCESS",
-          executedAt: new Date(),
-        },
-      });
+      if (result.success) {
+        await prisma.scheduledExecution.update({
+          where: { id: execution.id },
+          data: {
+            status: "SUCCESS",
+            executedAt: new Date(),
+          },
+        });
+
+        // Create audit log
+        await createAuditLog({
+          userId: execution.scheduledById,
+          teamId: execution.teamId,
+          action: "MIGRATION_EXECUTED",
+          resource: "migration",
+          resourceId: execution.migrationId,
+          details: {
+            scheduledExecutionId: execution.id,
+            duration: result.duration,
+            changes: result.changes,
+          },
+        });
+      } else {
+        await prisma.scheduledExecution.update({
+          where: { id: execution.id },
+          data: {
+            status: "FAILURE",
+            executedAt: new Date(),
+          },
+        });
+
+        // Create audit log for failure
+        await createAuditLog({
+          userId: execution.scheduledById,
+          teamId: execution.teamId,
+          action: "MIGRATION_FAILED",
+          resource: "migration",
+          resourceId: execution.migrationId,
+          details: {
+            scheduledExecutionId: execution.id,
+            error: result.error,
+            duration: result.duration,
+          },
+        });
+      }
 
       // Trigger webhook
       await triggerWebhook(

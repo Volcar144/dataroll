@@ -35,6 +35,9 @@ model User {
   givenApprovals    MigrationApproval[] @relation("ApprovalApprover")
   scheduledExecutions ScheduledExecution[]
   webhooks          Webhook[]             @relation("UserWebhooks")
+  pendingQueries    PendingQuery[]
+  proxyConnections  ProxyConnection[]
+  approvedQueries   PendingQuery[]      @relation("QueryApprover")
 
   @@map("users")
 }
@@ -119,6 +122,8 @@ model TeamMember {
 enum TeamRole {
   OWNER
   ADMIN
+  DEVELOPER
+  VIEWER
   MEMBER
 }
 
@@ -259,8 +264,11 @@ model WebhookDelivery {
   webhookId  String
   event      String
   payload    String   @db.Text
+  signature  String?
   response   String?  @db.Text
   statusCode Int?
+  status     String?  @default("PENDING")
+  error      String?
   success    Boolean  @default(false)
   deliveredAt DateTime?
   createdAt  DateTime @default(now())
@@ -284,6 +292,8 @@ model DatabaseConnection {
   environment Environment @default(DEVELOPMENT)
   requiresApproval Boolean @default(false)
   isActive    Boolean  @default(true)
+  healthStatus ConnectionHealthStatus @default(UNKNOWN)
+  lastHealthCheck DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   teamId      String
@@ -293,6 +303,9 @@ model DatabaseConnection {
   createdBy User          @relation(fields: [createdById], references: [id])
   migrations Migration[]
   scheduledExecutions ScheduledExecution[]
+  errors    DatabaseError[]
+  pendingQueries PendingQuery[]
+  proxyConnections ProxyConnection[]
 
   @@map("database_connections")
 }
@@ -301,6 +314,26 @@ enum DatabaseType {
   POSTGRESQL
   MYSQL
   SQLITE
+}
+
+enum ConnectionHealthStatus {
+  HEALTHY
+  UNHEALTHY
+  UNKNOWN
+}
+
+model DatabaseError {
+  id         String   @id @default(cuid())
+  connectionId String
+  operation  String   // e.g., "connection_test", "migration_execute", "query"
+  errorType  String   // e.g., "connection_failed", "query_error", "timeout"
+  message    String   @db.Text
+  details    String?  @db.Text // additional error details, stack trace, etc.
+  occurredAt DateTime @default(now())
+
+  connection DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("database_errors")
 }
 
 model Migration {
@@ -461,4 +494,49 @@ model NotificationPreferences {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+model PendingQuery {
+  id           String   @id @default(cuid())
+  query        String   @db.Text
+  params       Json?
+  connectionId String
+  userId       String
+  status       QueryStatus @default(PENDING)
+  approvedById String?
+  approvedAt   DateTime?
+  executedAt   DateTime?
+  result       Json?
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection   DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id])
+  approvedBy   User?              @relation("QueryApprover", fields: [approvedById], references: [id])
+
+  @@map("pending_queries")
+}
+
+model ProxyConnection {
+  id           String   @id @default(cuid())
+  connectionId String
+  userId       String
+  proxyUrl     String   @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection   DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id])
+
+  @@map("proxy_connections")
+}
+
+enum QueryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
 }

@@ -259,7 +259,8 @@ async function executePrismaMigration(
     // Execute the migration using the connection
     const result = await DatabaseConnectionService.executeQuery(
       migration.databaseConnection,
-      migration.content
+      migration.content,
+      migration.databaseConnectionId
     )
 
     return {
@@ -297,7 +298,8 @@ async function executeDrizzleMigration(
     // Execute Drizzle migration
     const result = await DatabaseConnectionService.executeQuery(
       migration.databaseConnection,
-      migration.content
+      migration.content,
+      migration.databaseConnectionId
     )
 
     return {
@@ -334,7 +336,8 @@ async function executeRawSqlMigration(
     // Execute raw SQL
     const result = await DatabaseConnectionService.executeQuery(
       migration.databaseConnection,
-      migration.content
+      migration.content,
+      migration.databaseConnectionId
     )
 
     return {

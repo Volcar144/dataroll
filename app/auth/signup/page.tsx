@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AuthService } from "@/lib/auth-service"
 import { useRouter } from "next/navigation"
+import posthog from "posthog-js"
 
 export default function SignUp() {
   const [email, setEmail] = useState("")
@@ -26,8 +27,21 @@ export default function SignUp() {
 
       if (!result.success) {
         setError(result.error || "Sign up failed")
+        posthog.capture('user_signup_failed', {
+          error: result.error || "Sign up failed",
+        })
         return
       }
+
+      // Identify the new user and capture signup event
+      posthog.identify(email, {
+        email: email,
+        name: name,
+      })
+      posthog.capture('user_signed_up', {
+        email: email,
+        name: name,
+      })
 
       router.push("/auth/signin")
     } catch (err) {

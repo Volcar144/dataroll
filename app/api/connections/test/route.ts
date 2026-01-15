@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       password: decryptedCredentials.password,
       ssl: connection.ssl,
       url: connection.url || undefined,
+      connectionId: connection.id,
     }
 
     logger.info('Testing database connection', {

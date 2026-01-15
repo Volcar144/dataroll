@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission, Permission } from "@/lib/permissions";
 import { createAuditLog } from "@/lib/audit";
 import { headers } from "next/headers";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * POST /api/approvals/[approvalId]/approve
@@ -76,6 +77,20 @@ export async function POST(
       },
       teamId,
       userId: session.user.id,
+    });
+
+    // Track migration approved event in PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'migration_approved',
+      properties: {
+        approval_id: updatedApproval.id,
+        migration_id: approval.migrationId,
+        team_id: teamId,
+        has_comments: !!comments,
+        source: 'api',
+      },
     });
 
     return Response.json(

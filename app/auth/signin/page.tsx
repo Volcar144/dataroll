@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AuthService } from "@/lib/auth-service"
 import { useRouter } from "next/navigation"
+import posthog from "posthog-js"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
@@ -33,8 +34,21 @@ export default function SignIn() {
           return
         }
         setError(result.error || "Sign in failed")
+        posthog.capture('user_signin_failed', {
+          method: 'email',
+          error: result.error || "Sign in failed",
+        })
         return
       }
+
+      // Identify the user and capture sign-in event
+      posthog.identify(email, {
+        email: email,
+      })
+      posthog.capture('user_signed_in', {
+        method: 'email',
+        used_2fa: showTwoFactor,
+      })
 
       router.push("/")
     } catch (err) {
@@ -53,12 +67,22 @@ export default function SignIn() {
 
       if (!result.success) {
         setError(result.error || "Passkey authentication failed")
+        posthog.capture('user_signin_failed', {
+          method: 'passkey',
+          error: result.error || "Passkey authentication failed",
+        })
         return
       }
+
+      // Capture passkey sign-in event
+      posthog.capture('user_signed_in_passkey', {
+        method: 'passkey',
+      })
 
       router.push("/")
     } catch (err) {
       setError("An unexpected error occurred")
+      posthog.captureException(err)
     } finally {
       setLoading(false)
     }
@@ -73,12 +97,24 @@ export default function SignIn() {
 
       if (!result.success) {
         setError(result.error || "Social sign in failed")
+        posthog.capture('user_signin_failed', {
+          method: 'social',
+          provider: provider,
+          error: result.error || "Social sign in failed",
+        })
         return
       }
+
+      // Capture social sign-in event
+      posthog.capture('user_signed_in_social', {
+        method: 'social',
+        provider: provider,
+      })
 
       router.push("/")
     } catch (err) {
       setError("An unexpected error occurred")
+      posthog.captureException(err)
     } finally {
       setLoading(false)
     }

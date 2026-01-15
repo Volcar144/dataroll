@@ -4,6 +4,7 @@ import { useSession } from "@/lib/auth-service"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import posthog from "posthog-js"
 
 interface Migration {
   id: string
@@ -100,10 +101,33 @@ export default function MigrationsPage() {
         if (!dryRun) {
           fetchMigrations() // Refresh the list
         }
+
+        // Track migration events
+        const eventName = dryRun ? 'migration_dry_run' : 'migration_executed'
+        posthog.capture(eventName, {
+          migration_id: migration.id,
+          migration_name: migration.name,
+          migration_version: migration.version,
+          migration_type: migration.type,
+          connection_name: migration.databaseConnection.name,
+          connection_type: migration.databaseConnection.type,
+          success: result.data.success,
+          duration_ms: result.data.duration,
+        })
       } else {
         setExecutionResult({
           success: false,
           duration: 0,
+          error: result.error?.message || 'Execution failed',
+        })
+
+        // Track failed migration attempt
+        const eventName = dryRun ? 'migration_dry_run' : 'migration_executed'
+        posthog.capture(eventName, {
+          migration_id: migration.id,
+          migration_name: migration.name,
+          migration_version: migration.version,
+          success: false,
           error: result.error?.message || 'Execution failed',
         })
       }
@@ -113,6 +137,7 @@ export default function MigrationsPage() {
         duration: 0,
         error: 'Migration execution failed',
       })
+      posthog.captureException(error)
     } finally {
       setExecutingMigration(null)
     }
@@ -143,10 +168,29 @@ export default function MigrationsPage() {
       if (result.success) {
         setExecutionResult(result.data)
         fetchMigrations() // Refresh the list
+
+        // Track rollback event
+        posthog.capture('migration_rolled_back', {
+          migration_id: migration.id,
+          migration_name: migration.name,
+          migration_version: migration.version,
+          migration_type: migration.type,
+          connection_name: migration.databaseConnection.name,
+          success: true,
+          duration_ms: result.data.duration,
+        })
       } else {
         setExecutionResult({
           success: false,
           duration: 0,
+          error: result.error?.message || 'Rollback failed',
+        })
+
+        // Track failed rollback
+        posthog.capture('migration_rolled_back', {
+          migration_id: migration.id,
+          migration_name: migration.name,
+          success: false,
           error: result.error?.message || 'Rollback failed',
         })
       }
@@ -156,6 +200,7 @@ export default function MigrationsPage() {
         duration: 0,
         error: 'Migration rollback failed',
       })
+      posthog.captureException(error)
     } finally {
       setRollingBackMigration(null)
     }

@@ -60,6 +60,7 @@ export async function triggerWebhook(
       const delivery = await prisma.webhookDelivery.create({
         data: {
           webhookId: webhook.id,
+          event,
           payload: JSON.stringify(payload),
           signature,
           status: "PENDING",
@@ -216,7 +217,7 @@ export async function retryWebhookDelivery(
   const payload = JSON.parse(delivery.payload);
 
   try {
-    await sendWebhook(webhook.url, payload, delivery.signature);
+    await sendWebhook(webhook.url, payload, delivery.signature!);
 
     await prisma.webhookDelivery.update({
       where: { id: deliveryId },

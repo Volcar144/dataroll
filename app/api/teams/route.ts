@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { 
-  CreateTeamSchema, 
+import {
+  CreateTeamSchema,
   UpdateTeamSchema,
   ApiResponseSchema,
   EmptyResponseSchema
 } from '@/lib/validation'
 import { logger } from '@/lib/telemetry'
 import { formatError } from '@/lib/errors'
+import { getPostHogClient } from '@/lib/posthog-server'
 
 // GET /api/teams - List teams for current user
 export async function GET(request: NextRequest) {
@@ -116,6 +117,19 @@ export async function POST(request: NextRequest) {
       name: team.name,
     }, {
       userId: session.user.id,
+    })
+
+    // Track team created event in PostHog
+    const posthog = getPostHogClient()
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'team_created',
+      properties: {
+        team_id: team.id,
+        team_name: team.name,
+        team_slug: team.slug,
+        source: 'api',
+      },
     })
 
     const response = {

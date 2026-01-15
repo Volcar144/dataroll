@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * POST /api/teams/invitations/[invitationId]/accept
@@ -69,6 +70,29 @@ export async function POST(
     await prisma.teamInvitation.update({
       where: { id: invitationId },
       data: { status: "ACCEPTED" },
+    });
+
+    // Track team invitation accepted event in PostHog
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'team_invitation_accepted',
+      properties: {
+        team_id: invitation.team.id,
+        team_name: invitation.team.name,
+        invitation_id: invitationId,
+        role: invitation.role,
+        source: 'api',
+      },
+    });
+
+    // Identify the user with team information
+    posthog.identify({
+      distinctId: session.user.id,
+      properties: {
+        email: session.user.email,
+        name: session.user.name,
+      },
     });
 
     return Response.json(

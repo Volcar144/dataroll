@@ -4,6 +4,7 @@ import { useSession } from "@/lib/auth-service"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import posthog from "posthog-js"
 
 interface DatabaseConnection {
   id: string
@@ -63,12 +64,30 @@ export default function ConnectionsPage() {
 
       const result = await response.json()
       if (result.success) {
-        alert(result.data.connected ? 'Connection successful!' : `Connection failed: ${result.data.error}`)
+        const isConnected = result.data.connected
+        alert(isConnected ? 'Connection successful!' : `Connection failed: ${result.data.error}`)
+
+        // Track connection tested event
+        posthog.capture('connection_tested', {
+          connection_id: connection.id,
+          connection_name: connection.name,
+          connection_type: connection.type,
+          test_success: isConnected,
+          error: isConnected ? undefined : result.data.error,
+        })
       } else {
         alert('Connection test failed')
+        posthog.capture('connection_tested', {
+          connection_id: connection.id,
+          connection_name: connection.name,
+          connection_type: connection.type,
+          test_success: false,
+          error: 'API error',
+        })
       }
     } catch (error) {
       alert('Connection test failed')
+      posthog.captureException(error)
     } finally {
       setTestingConnection(null)
     }

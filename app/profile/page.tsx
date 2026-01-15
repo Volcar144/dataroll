@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useSession, signOut } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { AuthService } from "@/lib/auth-service"
+import posthog from "posthog-js"
 
 interface Organization {
   id: string
@@ -64,8 +65,14 @@ export default function Profile() {
       setTwoFactorEnabled(true)
       setPassword("")
       setShowPasswordInput(false)
+
+      // Track 2FA enabled event
+      posthog.capture('two_factor_enabled', {
+        user_email: session?.user?.email,
+      })
     } catch (_err) {
       setError("Failed to enable 2FA")
+      posthog.captureException(_err)
     } finally {
       setLoading(false)
     }
@@ -93,8 +100,14 @@ export default function Profile() {
       setTwoFactorEnabled(false)
       setPassword("")
       setShowPasswordInput(false)
+
+      // Track 2FA disabled event
+      posthog.capture('two_factor_disabled', {
+        user_email: session?.user?.email,
+      })
     } catch (_err) {
       setError("Failed to disable 2FA")
+      posthog.captureException(_err)
     } finally {
       setLoading(false)
     }
@@ -123,8 +136,15 @@ export default function Profile() {
       setShowPasskeyInput(false)
       // Reload passkeys list
       loadPasskeys()
+
+      // Track passkey added event
+      posthog.capture('passkey_added', {
+        user_email: session?.user?.email,
+        passkey_name: passkeyName.trim(),
+      })
     } catch (_err) {
       setError("Failed to add passkey")
+      posthog.captureException(_err)
     } finally {
       setLoading(false)
     }
@@ -172,8 +192,16 @@ export default function Profile() {
       setNewOrgName("")
       setNewOrgSlug("")
       loadOrganizations()
+
+      // Track organization created event
+      posthog.capture('organization_created', {
+        user_email: session?.user?.email,
+        organization_name: newOrgName,
+        organization_slug: newOrgSlug,
+      })
     } catch (_err) {
       setError("Failed to create organization")
+      posthog.captureException(_err)
     } finally {
       setLoading(false)
     }
@@ -227,7 +255,11 @@ export default function Profile() {
               </p>
             </div>
             <button
-              onClick={() => signOut()}
+              onClick={() => {
+                posthog.capture('user_signed_out')
+                posthog.reset()
+                signOut()
+              }}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
             >
               Sign Out
