@@ -4,7 +4,7 @@ import { passkey } from "@better-auth/passkey"
 import { twoFactor, haveIBeenPwned, organization, deviceAuthorization, apiKey } from "better-auth/plugins"
 import { prisma } from "@/lib/prisma"
 
-// Initialize BetterAuth with comprehensive configuratio
+// Initialize BetterAuth with comprehensive configuration
 export const auth = betterAuth({
     appName: "dataroll",
     baseURL: "https://fun-five-psi.vercel.app/",
