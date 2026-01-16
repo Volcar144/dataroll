@@ -57,7 +57,7 @@ export const auth = betterAuth({
         passkey({
             rpID: process.env.NODE_ENV === "production" ? "your-domain.com" : "localhost",
             rpName: "dataroll",
-            origin: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+            origin: process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app/",
             authenticatorSelection: {
                 residentKey: "preferred",
                 userVerification: "preferred"
