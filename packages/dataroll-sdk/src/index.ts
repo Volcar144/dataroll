@@ -6,7 +6,7 @@ import { deviceAuthorizationClient } from "better-auth/client/plugins";
 // Configuration schema
 const ConfigSchema = z.object({
   apiKey: z.string(),
-  baseUrl: z.string().default('https://dataroll.archiem.top/api'),
+  baseUrl: z.string().optional().default('https://dataroll.archiem.top/api'),
   teamId: z.string().optional(),
 });
 

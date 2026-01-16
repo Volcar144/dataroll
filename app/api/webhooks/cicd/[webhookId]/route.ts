@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // Find the webhook
     const webhook = await prisma.webhook.findUnique({
       where: { id: webhookId },
-      include: { user: true },
+      include: { createdBy: true },
     });
 
     if (!webhook) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Parse the payload
     const payload = WebhookPayloadSchema.parse(JSON.parse(await request.text()));
 
-    const userId = webhook.userId;
+    const userId = webhook.createdById;
 
     if (payload.action === 'migrate') {
       // Handle migration request
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: payload.connectionId,
           OR: [
-            { userId }, // User's own connection
+            { createdById: userId }, // User's own connection
             { team: { members: { some: { userId } } } }, // Team connection
           ],
         },
@@ -94,12 +94,15 @@ export async function POST(request: NextRequest) {
       const migration = await prisma.migration.create({
         data: {
           name,
+          version: Date.now().toString(),
           type,
+          filePath: `webhook/${name}.sql`,
           content,
           status: 'PENDING',
-          userId,
-          connectionId: payload.connectionId,
-          description: description || `CI/CD: ${payload.metadata?.commit || 'Unknown commit'}`,
+          teamId: connection.teamId,
+          databaseConnectionId: payload.connectionId,
+          createdById: userId,
+          notes: description || `CI/CD: ${payload.metadata?.commit || 'Unknown commit'}`,
         },
       });
 
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest) {
           await prisma.migration.update({
             where: { id: migration.id },
             data: {
-              status: 'COMPLETED',
+              status: 'EXECUTED',
               executedAt: new Date(),
             },
           });
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: payload.connectionId,
           OR: [
-            { userId }, // User's own connection
+            { createdById: userId }, // User's own connection
             { team: { members: { some: { userId } } } }, // Team connection
           ],
         },
@@ -190,7 +193,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Webhook error:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid webhook payload', details: error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid webhook payload', details: error.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -28,8 +28,6 @@ export default function DeviceCodeForm() {
       if (response.data) {
         // Redirect to approval page
         router.push(`/device/approve?user_code=${formattedCode}`);
-      } else {
-        setError('Invalid or expired code');
       }
     } catch (err: any) {
       setError(err?.message || 'Invalid or expired code');

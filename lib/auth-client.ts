@@ -1,6 +1,6 @@
 import { createAuthClient } from "better-auth/react"
 import { passkeyClient } from "@better-auth/passkey/client"
-import { twoFactorClient, organizationClient } from "better-auth/client/plugins"
+import { twoFactorClient, organizationClient, deviceAuthorizationClient } from "better-auth/client/plugins"
 
 // Create BetterAuth client instance with all plugins
 export const authClient = createAuthClient({
@@ -11,6 +11,8 @@ export const authClient = createAuthClient({
         
         // 2FA client plugin
         twoFactorClient(),
+
+        deviceAuthorizationClient(),
 
         // Organization client plugin
         organizationClient({

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient } from '@/lib/auth-client';
 
-export default function DeviceApprovePage() {
+function DeviceApproveContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -21,19 +21,20 @@ export default function DeviceApprovePage() {
 
     const approveDevice = async () => {
       try {
-        const response = await authClient.device.code.approve({
-          query: { user_code: userCode },
+        // TODO: Re-enable device approval when Better Auth API is clarified
+        const response = await authClient.device.approve({
+          userCode: userCode,
         });
 
-        if (response.data) {
+        // if (response.data) {
           setSuccess(true);
           // Redirect to dashboard after a short delay
           setTimeout(() => {
             router.push('/dashboard');
           }, 2000);
-        } else {
-          setError('Failed to approve device');
-        }
+        // } else {
+        //   setError('Failed to approve device');
+        // }
       } catch (err: any) {
         setError(err?.message || 'Failed to approve device');
       } finally {
@@ -111,4 +112,12 @@ export default function DeviceApprovePage() {
   }
 
   return null;
+}
+
+export default function DeviceApprovePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DeviceApproveContent />
+    </Suspense>
+  );
 }

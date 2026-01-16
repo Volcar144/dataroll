@@ -177,6 +177,25 @@ export const notificationPreferences = pgTable('notification_preferences', {
   }
 })
 
+// Auto approval rules table
+export const autoApprovalRules = pgTable('auto_approval_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  connectionId: varchar('connection_id', { length: 255 }),
+  teamId: varchar('team_id', { length: 255 }),
+  queryPattern: text('query_pattern'),
+  maxRows: integer('max_rows'),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' }).notNull().defaultNow(),
+}, (table) => {
+  return {
+    userIdx: index('auto_approval_rules_user_idx').on(table.userId),
+    connectionIdx: index('auto_approval_rules_connection_idx').on(table.connectionId),
+    teamIdx: index('auto_approval_rules_team_idx').on(table.teamId),
+  }
+})
+
 // Relations (for reference - actual relations handled by Prisma)
 export const teamsRelations = relations(teams, ({ many }) => ({
   members: many(teamMembers),

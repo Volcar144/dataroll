@@ -243,7 +243,7 @@ function LandingPage() {
 }
 
 function Dashboard() {
-  const { signOut } = useSession()
+  const session = useSession()
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">

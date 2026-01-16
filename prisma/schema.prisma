@@ -28,6 +28,8 @@ model User {
   migrations        Migration[]
   auditLogs         AuditLog[]
   notificationPreferences NotificationPreferences?
+  autoApprovalRules AutoApprovalRule[]
+  apiKeys           ApiKey[]
   twoFactorAuth     TwoFactorAuth?
   passkeyCredentials PasskeyCredential[]
   teamInvitations   TeamInvitation[]  @relation("UserInvitations")
@@ -100,6 +102,8 @@ model Team {
   permissions TeamPermission[]
   webhooks Webhook[]
   scheduledExecutions ScheduledExecution[]
+  autoApprovalRules AutoApprovalRule[]
+  apiKeys ApiKey[]
 
   @@map("teams")
 }
@@ -306,6 +310,7 @@ model DatabaseConnection {
   errors    DatabaseError[]
   pendingQueries PendingQuery[]
   proxyConnections ProxyConnection[]
+  autoApprovalRules AutoApprovalRule[]
 
   @@map("database_connections")
 }
@@ -494,6 +499,40 @@ model NotificationPreferences {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+
+model AutoApprovalRule {
+  id           String   @id @default(cuid())
+  userId       String
+  connectionId String?
+  teamId       String?
+  queryPattern String?  // Regex pattern to match queries
+  maxRows      Int?     // Maximum rows allowed for auto-approval
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection DatabaseConnection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  team       Team?               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("auto_approval_rules")
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String?
+  userId      String
+  teamId      String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
 }
 
 model PendingQuery {

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: validatedData.connectionId,
           OR: [
-            { userId }, // User's own connection
+            { createdById: userId }, // User's own connection
             { team: { members: { some: { userId } } } }, // Team connection
           ],
         },
@@ -68,12 +68,15 @@ export async function POST(request: NextRequest) {
       const migration = await prisma.migration.create({
         data: {
           name: validatedData.name,
+          version: Date.now().toString(),
           type: validatedData.type,
+          filePath: `ci/${validatedData.name}.sql`,
           content: validatedData.content,
           status: 'PENDING',
-          userId,
-          connectionId: validatedData.connectionId,
-          description: validatedData.description,
+          teamId: connection.teamId,
+          databaseConnectionId: validatedData.connectionId,
+          createdById: userId,
+          notes: validatedData.description,
         },
       });
 
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
           await prisma.migration.update({
             where: { id: migration.id },
             data: {
-              status: 'COMPLETED',
+              status: 'EXECUTED',
               executedAt: new Date(),
             },
           });
@@ -129,7 +132,7 @@ export async function POST(request: NextRequest) {
         where: {
           id: validatedData.connectionId,
           OR: [
-            { userId }, // User's own connection
+            { createdById: userId }, // User's own connection
             { team: { members: { some: { userId } } } }, // Team connection
           ],
         },
@@ -160,7 +163,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('CI/CD API error:', error);
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

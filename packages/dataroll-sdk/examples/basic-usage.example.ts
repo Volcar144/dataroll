@@ -5,6 +5,7 @@ async function main() {
   // Initialize client
   const client = createDataRollClient({
     apiKey: process.env.DATAROLL_API_KEY!,
+    baseUrl: process.env.DATAROLL_BASE_URL || 'https://dataroll.archiem.top/api',
     teamId: process.env.DATAROLL_TEAM_ID,
   });
 
