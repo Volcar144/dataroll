@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 // Initialize BetterAuth with comprehensive configuration
 export const auth = betterAuth({
     appName: "dataroll",
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: "https://fun-five-psi.vercel.app/",
     basePath: "/api/auth",
     secret: process.env.BETTER_AUTH_SECRET,
       database: prismaAdapter(prisma, {
