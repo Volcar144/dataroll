@@ -333,6 +333,10 @@ program
     try {
       let content = '';
       if (options.file) {
+        if (options.file.includes('..')) {
+          console.error('Error: Invalid file path');
+          process.exit(1);
+        }
         content = fs.readFileSync(options.file, 'utf8');
       } else {
         console.error('SQL file required. Use -f or --file option.');
