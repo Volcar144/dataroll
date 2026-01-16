@@ -4,6 +4,13 @@ import { useSession } from "@/lib/auth-service"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help"
+import { useShortcut } from "@/lib/keyboard-shortcuts"
+import { EmptyState } from "@/components/empty-state"
+import { Skeleton } from "@/components/ui/skeleton"
+import { DashboardStatsSkeleton, QuickActionsSkeleton, RecentActivitySkeleton } from "@/components/dashboard-skeletons"
+import { FileText, Activity } from "lucide-react"
 
 interface DashboardStats {
   totalTeams: number
@@ -34,6 +41,44 @@ export default function Dashboard() {
       fetchDashboardStats()
     }
   }, [session])
+
+  // Keyboard shortcuts
+  useShortcut('c', () => router.push('/dashboard/connections'), {
+    description: 'Go to Connections',
+    category: 'Navigation'
+  });
+
+  useShortcut('m', () => router.push('/dashboard/migrations'), {
+    description: 'Go to Migrations',
+    category: 'Navigation'
+  });
+
+  useShortcut('t', () => router.push('/dashboard/teams'), {
+    description: 'Go to Teams',
+    category: 'Navigation'
+  });
+
+  useShortcut('a', () => router.push('/dashboard/audit'), {
+    description: 'Go to Audit Logs',
+    category: 'Navigation'
+  });
+
+  useShortcut('p', () => router.push('/profile'), {
+    description: 'Go to Profile',
+    category: 'Navigation'
+  });
+
+  useShortcut('r', () => window.location.reload(), {
+    description: 'Refresh dashboard',
+    category: 'Actions'
+  });
+
+  useShortcut('?', () => {
+    // This will be handled by the KeyboardShortcutsHelp component
+  }, {
+    description: 'Show keyboard shortcuts',
+    category: 'Help'
+  });
 
   const fetchDashboardStats = async () => {
     try {
@@ -67,8 +112,29 @@ export default function Dashboard() {
 
   if (isPending || loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-100"></div>
+      <div className="min-h-screen bg-zinc-50 dark:bg-black">
+        {/* Header */}
+        <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-6">
+              <div>
+                <Skeleton className="h-8 w-32 mb-1" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-8 w-8 rounded" />
+                <Skeleton className="h-8 w-16 rounded" />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <DashboardStatsSkeleton />
+          <QuickActionsSkeleton />
+          <RecentActivitySkeleton />
+        </main>
       </div>
     )
   }
@@ -92,6 +158,8 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <KeyboardShortcutsHelp />
+              <ThemeToggle />
               <Link
                 href="/profile"
                 className="px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -251,9 +319,16 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              No recent activity to display.
-            </p>
+            <EmptyState
+              icon={<Activity className="h-12 w-12" />}
+              title="No recent activity"
+              description="Your recent database operations and team activities will appear here."
+              action={{
+                label: "View Audit Logs",
+                onClick: () => router.push('/dashboard/audit'),
+                variant: 'outline'
+              }}
+            />
           )}
         </div>
       </main>

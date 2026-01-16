@@ -5,10 +5,38 @@ import { signOut } from "@/lib/auth-client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help"
+import { useShortcut } from "@/lib/keyboard-shortcuts"
 
 function LandingPage() {
+  const router = useRouter();
+
+  // Keyboard shortcuts
+  useShortcut('s', () => router.push('/auth/signin'), {
+    description: 'Sign In',
+    category: 'Navigation'
+  });
+
+  useShortcut('g', () => router.push('/auth/signup'), {
+    description: 'Get Started (Sign Up)',
+    category: 'Navigation'
+  });
+
+  useShortcut('d', () => router.push('/dashboard'), {
+    description: 'Go to Dashboard',
+    category: 'Navigation'
+  });
+
+  useShortcut('?', () => {
+    // This will be handled by the KeyboardShortcutsHelp component
+  }, {
+    description: 'Show keyboard shortcuts',
+    category: 'Help'
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Navigation */}
       <nav className="relative z-10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -16,10 +44,12 @@ function LandingPage() {
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">DR</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">DataRoll</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">DataRoll</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Link href="/auth/signin" className="text-gray-600 hover:text-gray-900 transition-colors">
+            <KeyboardShortcutsHelp />
+            <ThemeToggle />
+            <Link href="/auth/signin" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
               Sign In
             </Link>
             <Link

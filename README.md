@@ -19,6 +19,11 @@ A comprehensive database migration manager SaaS platform with support for both P
 - 🏃‍♂️ **Dry-Run Support** - Test migrations before execution
 - 📧 **Notifications** - Email and Slack integration for migration alerts
 - 🔒 **Secure Credential Storage** - Encrypted database connection credentials
+- 🎨 **Modern UI/UX** - Dark/light theme support with keyboard shortcuts
+- ⌨️ **Keyboard Shortcuts** - Power user navigation and actions
+- 📱 **Responsive Design** - Mobile-first approach with accessibility
+- 🔄 **Loading States** - Skeleton loaders and smooth transitions
+- 🎯 **Empty States** - Helpful guidance when data is missing
 
 ## Tech Stack
 
@@ -33,7 +38,9 @@ A comprehensive database migration manager SaaS platform with support for both P
 - **Database**: PostgreSQL (primary), MySQL/SQLite (targets)
 - **Validation**: Zod
 - **Encryption**: Node.js Crypto (AES-256-GCM)
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS with custom properties
+- **UI Components**: Radix UI primitives with class-variance-authority
+- **Icons**: Lucide React
 - **TypeScript**: Full TypeScript support
 
 ## BetterAuth Setup Complete
@@ -176,6 +183,44 @@ haveIBeenPwned({
 
 See `lib/auth-with-plugins.example.ts` for the complete configuration with all plugins enabled.
 
+## UI/UX Enhancements
+
+✅ **Dark/Light Theme System:**
+- Complete theme provider with React Context
+- CSS custom properties for dynamic theming
+- System preference detection and localStorage persistence
+- Theme toggle component with Sun/Moon/Monitor icons
+
+✅ **Keyboard Shortcuts:**
+- Global shortcut system with React hooks
+- Dashboard navigation shortcuts (C, M, T, A, P)
+- Landing page shortcuts (S, G, D)
+- Help modal with comprehensive shortcut reference
+- Input field awareness (shortcuts disabled when typing)
+
+✅ **Loading States & Skeletons:**
+- Skeleton components for dashboard stats
+- Quick actions skeleton loading
+- Recent activity skeleton with proper structure
+- Smooth loading transitions
+
+✅ **Empty States:**
+- Informative empty state component
+- Contextual actions and descriptions
+- Consistent iconography and messaging
+
+✅ **Security Hardening:**
+- Security headers (X-Frame-Options, X-Content-Type-Options, etc.)
+- Rate limiting middleware (100 req/min general, 50 req/min API)
+- CSRF protection for state-changing operations
+- IP-based rate limiting with proper headers
+
+✅ **UI Component Library:**
+- Radix UI primitives (Dialog, Dropdown, Button)
+- Class variance authority for component variants
+- Consistent design system with accessibility
+- Utility functions for className management
+
 ## API Routes
 
 The application includes comprehensive API endpoints:
@@ -208,15 +253,32 @@ dataroll/
 │   │   ├── connections/        # Database connection management
 │   │   ├── migrations/         # Migration operations
 │   │   └── teams/             # Team management
-│   ├── globals.css
-│   ├── layout.tsx
-│   └── page.tsx
+│   ├── dashboard/             # Dashboard pages
+│   ├── auth/                  # Authentication pages
+│   ├── globals.css            # Global styles with theme variables
+│   ├── layout.tsx             # Root layout with theme provider
+│   └── page.tsx               # Landing page
+├── components/
+│   ├── ui/                    # Reusable UI components
+│   │   ├── button.tsx         # Button component with variants
+│   │   ├── dialog.tsx         # Dialog/modal component
+│   │   ├── dropdown-menu.tsx  # Dropdown menu component
+│   │   └── skeleton.tsx       # Loading skeleton component
+│   ├── theme-toggle.tsx       # Theme switcher component
+│   ├── keyboard-shortcuts-help.tsx  # Shortcuts help modal
+│   ├── empty-state.tsx        # Empty state component
+│   └── dashboard-skeletons.tsx # Dashboard loading skeletons
 ├── lib/
 │   ├── auth.ts                 # BetterAuth configuration
 │   ├── auth-client.ts          # Client-side auth utilities
+│   ├── theme-provider.tsx      # Theme context provider
+│   ├── keyboard-shortcuts.tsx  # Keyboard shortcuts system
+│   ├── csrf.ts                 # CSRF protection utilities
 │   ├── prisma.ts              # Prisma client
 │   ├── validation.ts           # Zod schemas
-│   └── errors.ts              # Error handling
+│   ├── errors.ts              # Error handling
+│   └── telemetry.ts           # Logging and monitoring
+├── middleware.ts              # Rate limiting and security middleware
 ├── prisma/
 │   ├── schema.prisma           # Database schema
 │   └── seed.ts                # Database seeding
@@ -228,10 +290,12 @@ dataroll/
 
 - ✅ **Session Security**: Database-backed sessions with 30-day expiry
 - ✅ **Password Policy**: Minimum 12 characters, email verification required
-- ✅ **CSRF Protection**: Built-in CSRF protection via BetterAuth
-- ✅ **Secure Headers**: Security headers configured
+- ✅ **CSRF Protection**: Built-in CSRF protection via BetterAuth + custom token validation
+- ✅ **Security Headers**: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- ✅ **Rate Limiting**: 100 requests/minute general, 50 requests/minute API routes
 - ✅ **Environment Variables**: Sensitive data stored in environment variables
-- ✅ **Audit Logging**: Comprehensive activity tracking
+- ✅ **Audit Logging**: Comprehensive activity tracking and security monitoring
+- ✅ **IP-based Protection**: Request rate limiting with client IP tracking
 
 ## Testing Authentication
 

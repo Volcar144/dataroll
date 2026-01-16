@@ -12,6 +12,25 @@ import { encryptCredentials } from '@/lib/encryption'
 import { logger, securityLogger } from '@/lib/telemetry'
 import { formatError } from '@/lib/errors'
 import { getPostHogClient } from '@/lib/posthog-server'
+import { verifyCSRFToken, getCSRFTokenFromRequest } from '@/lib/csrf'
+
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  const clientIP = request.headers.get('x-client-ip');
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (realIP) {
+    return realIP;
+  }
+  if (clientIP) {
+    return clientIP;
+  }
+
+  return 'unknown';
+}
 
 // GET /api/connections - List database connections for current user's team
 export async function GET(request: NextRequest) {
@@ -102,6 +121,21 @@ export async function POST(request: NextRequest) {
         { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
         { status: 401 }
       )
+    }
+
+    // Verify CSRF token for state-changing operations
+    const csrfToken = getCSRFTokenFromRequest(request);
+    if (!csrfToken || !verifyCSRFToken(csrfToken)) {
+      securityLogger.suspicious('CSRF token validation failed', {
+        action: 'create_connection',
+        userId: session.user.id,
+        userAgent: request.headers.get('user-agent'),
+        ip: getClientIP(request),
+      });
+      return NextResponse.json(
+        { error: { code: 'CSRF_ERROR', message: 'Invalid CSRF token' } },
+        { status: 403 }
+      );
     }
 
     const body = await request.json()
