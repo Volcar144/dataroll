@@ -30,7 +30,7 @@
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "mysql2": "^3.16.0",
-    "next": "16.0.7",
+    "next": "16.0.10",
     "nodemailer": "^7.0.12",
     "postgres": "^3.4.8",
     "posthog-js": "^1.323.0",
