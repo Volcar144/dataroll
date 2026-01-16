@@ -55,7 +55,7 @@ export const auth = betterAuth({
         
         // Passkey/WebAuthn support
         passkey({
-            rpID: process.env.NODE_ENV === "production" ? "your-domain.com" : "localhost",
+            rpID: process.env.NODE_ENV === "production" ? "https://fun-five-psi.vercel.app/" : "localhost",
             rpName: "dataroll",
             origin: process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app/",
             authenticatorSelection: {
