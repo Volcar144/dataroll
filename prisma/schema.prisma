@@ -11,13 +11,13 @@ datasource db {
 // BetterAuth Models
 
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String?
-  email         String    @unique
-  emailVerified Boolean?  @default(false)
+  email         String   @unique
+  emailVerified Boolean? @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // BetterAuth relations
   accounts Account[]
@@ -78,9 +78,11 @@ model Account {
   idToken               String?
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  password String?
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
