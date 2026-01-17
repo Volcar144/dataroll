@@ -1,6 +1,6 @@
 # DataRoll
 
-A comprehensive database migration manager SaaS platform with support for both Prisma and Drizzle ORM, featuring multi-team support, migration versioning, validation, and rollback capabilities
+A comprehensive database migration manager SaaS platform with support for both Prisma and Drizzle ORM, featuring multi-team support, migration versioning, validation, and rollback capabilities.
 
 ## Features
 
