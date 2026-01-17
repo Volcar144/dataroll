@@ -35,9 +35,10 @@ export class ApprovalExecutor implements NodeExecutor {
 
       // For automatic approval in testing/demo, approve immediately
       // In production, this would wait for actual user approval
-      if (process.env.NODE_ENV === 'development') {
-        await ApprovalExecutor.autoApprove(approval.id, context.currentUser.id);
-      }
+      // TODO: Remove this demo logic once proper approval workflow is implemented
+      // if (process.env.NODE_ENV === 'development') {
+      //   await ApprovalExecutor.autoApprove(approval.id, context.currentUser.id);
+      // }
 
       return {
         success: true,

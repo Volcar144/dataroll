@@ -94,6 +94,10 @@ export const NotificationNodeDataSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(), // HTTP headers
   body: z.string().optional(), // HTTP body
   teamId: z.string().optional(), // For team notifications
+  routingKey: z.string().optional(), // PagerDuty routing key
+  eventAction: z.enum(['trigger', 'acknowledge', 'resolve']).optional(), // PagerDuty event action
+  severity: z.enum(['critical', 'error', 'warning', 'info']).optional(), // PagerDuty severity
+  summary: z.string().optional(), // PagerDuty summary
 });
 
 export const DelayNodeDataSchema = z.object({

@@ -16,7 +16,7 @@ export class DelayExecutor implements NodeExecutor {
       // For actual delay, we'd use setTimeout or a job queue
       // For now, just simulate the delay
       if (delayMs > 0) {
-        await new Promise(resolve => setTimeout(resolve, Math.min(delayMs, 1000))); // Cap at 1s for demo
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
 
       return {

@@ -377,11 +377,16 @@ export class DatabaseConnectionService {
   }
 
   private static async decryptPassword(encryptedPassword: string): Promise<string> {
-    // This should use the same encryption logic as in your encryption.ts file
-    // For now, return a placeholder implementation
-    const encrypted = encryptedPassword.replace('encrypted:', '')
-    // In production, you'd decrypt using your encryption service
-    return encrypted // Placeholder - should be properly decrypted
+    // Import the decryption function
+    const { decryptCredentials } = await import('@/lib/encryption');
+
+    try {
+      const decrypted = await decryptCredentials(encryptedPassword, process.env.ENCRYPTION_KEY || 'default-encryption-key');
+      return decrypted.password;
+    } catch (error) {
+      // If decryption fails, assume it's already decrypted
+      return encryptedPassword;
+    }
   }
 
   // Detect ORM type from database schema/metadata

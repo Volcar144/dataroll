@@ -179,22 +179,23 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error(`Database connection not found: ${connectionId}`);
     }
 
-    // This would integrate with the existing migration discovery logic
-    // For now, return a mock result
-    const migrations = [
-      {
-        id: 'migration-1',
-        name: 'create_users_table',
-        version: '001',
-        status: 'pending',
+    // Get actual migrations from the database
+    const migrations = await prisma.migration.findMany({
+      where: {
+        databaseConnectionId: connectionId,
+        teamId: context.currentUser.teamId, // Assuming team context
       },
-      {
-        id: 'migration-2',
-        name: 'add_user_profiles',
-        version: '002',
-        status: 'pending',
+      select: {
+        id: true,
+        name: true,
+        version: true,
+        status: true,
+        createdAt: true,
       },
-    ];
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     return {
       migrations,
@@ -220,16 +221,8 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error(`Database connection not found: ${connectionId}`);
     }
 
-    // This would perform a dry-run of migrations
-    // For now, return a mock result
-    const dryRunResult = {
-      success: true,
-      changes: [
-        { table: 'users', operation: 'CREATE TABLE', sql: 'CREATE TABLE users (...)' },
-        { table: 'user_profiles', operation: 'ALTER TABLE', sql: 'ALTER TABLE users ADD COLUMN profile_id...' },
-      ],
-      warnings: [],
-    };
+    // Perform actual dry-run of migrations
+    const dryRunResult = await this.performMigrationDryRun(nodeData.migrations, connection);
 
     return {
       dryRunResult,
@@ -256,13 +249,8 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error(`Database connection not found: ${connectionId}`);
     }
 
-    // This would execute the actual migrations
-    // For now, return a mock result
-    const executionResult = {
-      success: true,
-      executedMigrations: nodeData.migrations?.length || 0,
-      duration: 1500, // ms
-    };
+    // Execute the actual migrations
+    const executionResult = await this.performMigrationExecution(nodeData.migrations, connection);
 
     return {
       executionResult,
@@ -289,18 +277,8 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error(`Database connection not found: ${connectionId}`);
     }
 
-    // This would perform a rollback operation
-    // For PITR (Point-in-Time Recovery), this would restore to a previous state
-    const rollbackResult = {
-      success: true,
-      rolledBackTo: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-      affectedTables: ['users', 'user_profiles'],
-    };
-
-    return {
-      rollbackResult,
-      connectionId,
-    };
+    // Perform actual rollback operation
+    const rollbackResult = await this.performMigrationRollback(nodeData.migrations, connection, context);
   }
 
   private async customApiCall(
@@ -534,5 +512,86 @@ export class ActionExecutor implements NodeExecutor {
     } catch (error) {
       throw new Error(`Data transformation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  private async performMigrationRollback(migrations: any[], connection: any, context: ExecutionContext): Promise<any> {
+    const results = [];
+    let totalDuration = 0;
+
+    for (const migrationData of migrations) {
+      // Find the actual migration record
+      const migration = await prisma.migration.findUnique({
+        where: { id: migrationData.id },
+        include: { databaseConnection: true },
+      });
+
+      if (!migration) {
+        results.push({
+          migrationId: migrationData.id,
+          success: false,
+          error: 'Migration not found',
+        });
+        continue;
+      }
+
+      // Check if migration can be rolled back
+      if (migration.status !== 'EXECUTED') {
+        results.push({
+          migrationId: migration.id,
+          success: false,
+          error: 'Migration is not in EXECUTED status',
+        });
+        continue;
+      }
+
+      try {
+        // Call the rollback API
+        const rollbackResponse = await fetch(`${process.env.BETTER_AUTH_URL}/api/migrations/rollback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${context.apiKey || 'workflow-key'}`, // Need to get proper auth
+          },
+          body: JSON.stringify({
+            migrationId: migration.id,
+            teamId: context.currentUser.teamId,
+            reason: `Workflow rollback: ${context.workflowId}`,
+            force: false,
+            createBackup: true,
+          }),
+        });
+
+        const rollbackResult = await rollbackResponse.json();
+
+        if (rollbackResult.success) {
+          results.push({
+            migrationId: migration.id,
+            success: true,
+            duration: rollbackResult.duration || 0,
+          });
+          totalDuration += rollbackResult.duration || 0;
+        } else {
+          results.push({
+            migrationId: migration.id,
+            success: false,
+            error: rollbackResult.error || 'Rollback failed',
+          });
+        }
+      } catch (error) {
+        results.push({
+          migrationId: migration.id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Rollback request failed',
+        });
+      }
+    }
+
+    return {
+      success: results.every(r => r.success),
+      rolledBackMigrations: results.filter(r => r.success).length,
+      totalMigrations: migrations.length,
+      duration: totalDuration,
+      results,
+    };
   }
 }

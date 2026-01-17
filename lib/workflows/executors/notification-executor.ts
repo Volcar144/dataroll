@@ -85,8 +85,8 @@ export class NotificationExecutor implements NodeExecutor {
         break;
 
       case 'pagerduty':
-        if (!nodeData.recipient) {
-          errors.push('PagerDuty recipient is required');
+        if (!nodeData.routingKey && !nodeData.recipient) {
+          errors.push('PagerDuty routing key is required');
         }
         break;
 
@@ -241,22 +241,58 @@ export class NotificationExecutor implements NodeExecutor {
     context: ExecutionContext,
     previousOutput: any
   ): Promise<any> {
-    // In a real implementation, this would integrate with PagerDuty API
-    // For now, return a mock result
-    const recipient = nodeData.recipient!;
-    const message = nodeData.message!;
+    const routingKey = nodeData.routingKey || nodeData.recipient;
+    if (!routingKey) {
+      throw new Error('PagerDuty routing key is required');
+    }
 
-    console.log('Sending PagerDuty alert:', {
-      recipient,
-      message,
-      workflowId: context.workflowId,
-      executionId: context.executionId,
+    const eventAction = nodeData.eventAction || 'trigger';
+    const severity = nodeData.severity || 'error';
+    const summary = nodeData.summary || nodeData.message || 'Workflow notification';
+
+    const payload = {
+      routing_key: routingKey,
+      event_action: eventAction,
+      dedup_key: `${context.workflowId}-${context.executionId}`,
+      payload: {
+        summary,
+        severity,
+        source: 'DataRoll Workflow',
+        component: 'workflow-engine',
+        group: context.workflowId,
+        class: 'workflow-notification',
+        custom_details: {
+          workflowId: context.workflowId,
+          executionId: context.executionId,
+          previousOutput,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    };
+
+    const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`PagerDuty API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    const responseData = await response.json();
 
     return {
       provider: 'pagerduty',
-      recipient,
-      message,
+      routingKey,
+      eventAction,
+      severity,
+      summary,
+      dedupKey: payload.dedup_key,
+      incidentKey: responseData.dedup_key,
       sent: true,
       timestamp: new Date().toISOString(),
     };
