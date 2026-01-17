@@ -40,6 +40,10 @@ model User {
   pendingQueries    PendingQuery[]
   proxyConnections  ProxyConnection[]
   approvedQueries   PendingQuery[]      @relation("QueryApprover")
+  workflowDefinitions WorkflowDefinition[]
+  workflowApprovals  WorkflowApproval[] @relation("WorkflowApprover")
+  approvalResponses  ApprovalResponse[]
+  createdWorkflows   Workflow[]         @relation("WorkflowCreator")
 
   @@map("users")
 }
@@ -104,6 +108,7 @@ model Team {
   scheduledExecutions ScheduledExecution[]
   autoApprovalRules AutoApprovalRule[]
   apiKeys ApiKey[]
+  workflows Workflow[]
 
   @@map("teams")
 }
@@ -578,4 +583,206 @@ enum QueryStatus {
   REJECTED
   EXECUTED
   FAILED
+}
+
+// Workflow System Models
+model Workflow {
+  id String @id @default(cuid())
+  teamId String
+  name String
+  description String? @db.Text
+
+  // Current workflow definition
+  definitionId String @unique
+
+  // Versioning
+  version Int @default(1)
+  isPublished Boolean @default(false)
+  publishedAt DateTime?
+
+  // Metadata
+  tags String[] @default([])
+  trigger String // "manual", "scheduled", "webhook", "event"
+
+  // Tracking
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  definitions WorkflowDefinition[]
+  executions WorkflowExecution[]
+  triggers WorkflowTrigger[]
+  variables WorkflowVariable[]
+  approvals WorkflowApproval[]
+  creator User @relation("WorkflowCreator", fields: [createdBy], references: [id])
+
+  @@map("workflows")
+}
+
+model WorkflowDefinition {
+  id String @id @default(cuid())
+  workflowId String
+
+  // YAML/JSON storage
+  content String @db.Text // Full workflow definition
+  format String @default("json") // "json" or "yaml"
+
+  // Metadata
+  nodes String @db.Text // Serialized nodes array
+  edges String @db.Text // Serialized edges array
+
+  // Version control
+  version Int
+  changelog String? @db.Text
+
+  createdAt DateTime @default(now())
+  createdBy String
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@map("workflow_definitions")
+}
+
+model WorkflowExecution {
+  id String @id @default(cuid())
+  workflowId String
+
+  // Execution state
+  status String // "pending", "running", "success", "failed", "cancelled"
+
+  // Triggers
+  triggeredBy String // userId or "schedule" or "webhook"
+  triggeredAt DateTime @default(now())
+  startedAt DateTime?
+  completedAt DateTime?
+
+  // Execution data
+  context String @db.Text // Input variables/context
+  output String? @db.Text // Final output
+  error String? @db.Text // Error details
+
+  // Tracking
+  nodeExecutions NodeExecution[]
+  approvals WorkflowApproval[]
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_executions")
+}
+
+model NodeExecution {
+  id String @id @default(cuid())
+  executionId String
+
+  // Node identification
+  nodeId String
+  nodeType String // "trigger", "action", "condition", "approval", "notification", etc
+  nodeName String
+
+  // Execution state
+  status String // "pending", "running", "success", "failed", "skipped"
+
+  // Data flow
+  input String @db.Text // Input to this node
+  output String? @db.Text // Output from this node
+  error String? @db.Text // Error if failed
+
+  // Timing
+  startedAt DateTime?
+  completedAt DateTime?
+  duration Int? // milliseconds
+
+  // Retry info
+  retryCount Int @default(0)
+  retryable Boolean @default(false)
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("node_executions")
+}
+
+model WorkflowTrigger {
+  id String @id @default(cuid())
+  workflowId String
+
+  // Trigger configuration
+  type String // "manual", "scheduled", "webhook", "on_event"
+  config String @db.Text // Trigger-specific config (cron, event filter, webhook key, etc)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("workflow_triggers")
+}
+
+model WorkflowVariable {
+  id String @id @default(cuid())
+  workflowId String
+
+  name String
+  type String // "string", "number", "boolean", "object", "secret"
+  defaultValue String? @db.Text
+  description String? @db.Text
+  isSecret Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, name])
+  @@map("workflow_variables")
+}
+
+model WorkflowApproval {
+  id String @id @default(cuid())
+  workflowId String
+  executionId String
+  nodeId String
+  nodeName String
+
+  status ApprovalStatus @default(PENDING)
+  approvalType String // "any", "majority", "unanimous"
+  approvers String[] // User IDs
+  requiredApprovals Int
+  timeoutMinutes Int?
+  message String? @db.Text
+  context String? @db.Text // JSON context data
+
+  approvedBy String? // User ID who approved
+  approvedAt DateTime?
+  rejectionReason String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  approvals ApprovalResponse[]
+  approver User? @relation("WorkflowApprover", fields: [approvedBy], references: [id])
+
+  @@map("workflow_approvals")
+}
+
+model ApprovalResponse {
+  id String @id @default(cuid())
+  approvalId String
+
+  userId String
+  decision String // "approved", "rejected"
+  comment String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  approval WorkflowApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([approvalId, userId])
+  @@map("approval_responses")
 }
