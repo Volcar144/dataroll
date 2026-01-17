@@ -52,7 +52,7 @@ export const ActionNodeDataSchema = z.object({
     'transform_data'
   ]),
   connectionId: z.string().optional(),
-  migrations: z.string().optional(), // Template string
+  migrations: z.array(z.any()).optional(), // Array of migration objects
   url: z.string().optional(),
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).optional(),
   headers: z.record(z.string(), z.string()).optional(),
@@ -108,6 +108,7 @@ export const DelayNodeDataSchema = z.object({
 export const WorkflowExecutionStatusSchema = z.enum([
   'pending',
   'running',
+  'paused',
   'success',
   'failed',
   'cancelled'

@@ -183,7 +183,7 @@ export class ActionExecutor implements NodeExecutor {
     const migrations = await prisma.migration.findMany({
       where: {
         databaseConnectionId: connectionId,
-        teamId: context.currentUser.teamId, // Assuming team context
+        teamId: context.teamId,
       },
       select: {
         id: true,
@@ -212,6 +212,10 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error('Database connection ID is required');
     }
 
+    if (!nodeData.migrations || !Array.isArray(nodeData.migrations)) {
+      throw new Error('Migrations array is required for dry run');
+    }
+
     // Get database connection
     const connection = await prisma.databaseConnection.findUnique({
       where: { id: connectionId },
@@ -238,6 +242,10 @@ export class ActionExecutor implements NodeExecutor {
     const connectionId = nodeData.connectionId || context.connectionId;
     if (!connectionId) {
       throw new Error('Database connection ID is required');
+    }
+
+    if (!nodeData.migrations || !Array.isArray(nodeData.migrations)) {
+      throw new Error('Migrations array is required for execution');
     }
 
     // Get database connection
@@ -277,8 +285,34 @@ export class ActionExecutor implements NodeExecutor {
       throw new Error(`Database connection not found: ${connectionId}`);
     }
 
+    // If no specific migrations provided, get the last executed migration
+    let migrationsToRollback = nodeData.migrations;
+    if (!migrationsToRollback || !Array.isArray(migrationsToRollback) || migrationsToRollback.length === 0) {
+      const lastExecutedMigration = await prisma.migration.findFirst({
+        where: {
+          databaseConnectionId: connectionId,
+          status: 'EXECUTED',
+          teamId: context.teamId,
+        },
+        orderBy: {
+          executedAt: 'desc',
+        },
+        select: {
+          id: true,
+          name: true,
+          version: true,
+        },
+      });
+
+      if (!lastExecutedMigration) {
+        throw new Error('No executed migrations found to rollback');
+      }
+
+      migrationsToRollback = [lastExecutedMigration];
+    }
+
     // Perform actual rollback operation
-    const rollbackResult = await this.performMigrationRollback(nodeData.migrations, connection, context);
+    const rollbackResult = await this.performMigrationRollback(migrationsToRollback, connection, context);
   }
 
   private async customApiCall(
@@ -554,7 +588,7 @@ export class ActionExecutor implements NodeExecutor {
           },
           body: JSON.stringify({
             migrationId: migration.id,
-            teamId: context.currentUser.teamId,
+            teamId: context.teamId,
             reason: `Workflow rollback: ${context.workflowId}`,
             force: false,
             createBackup: true,
@@ -589,6 +623,152 @@ export class ActionExecutor implements NodeExecutor {
     return {
       success: results.every(r => r.success),
       rolledBackMigrations: results.filter(r => r.success).length,
+      totalMigrations: migrations.length,
+      duration: totalDuration,
+      results,
+    };
+  }
+
+  private async performMigrationDryRun(migrations: any[], connection: any): Promise<any> {
+    const results = [];
+    let totalDuration = 0;
+
+    for (const migrationData of migrations) {
+      // Find the actual migration record
+      const migration = await prisma.migration.findUnique({
+        where: { id: migrationData.id },
+        include: { databaseConnection: true },
+      });
+
+      if (!migration) {
+        results.push({
+          migrationId: migrationData.id,
+          success: false,
+          error: 'Migration not found',
+        });
+        continue;
+      }
+
+      try {
+        // Call the dry-run API
+        const dryRunResponse = await fetch(`${process.env.BETTER_AUTH_URL}/api/migrations/dry-run`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer workflow-key`, // Need to get proper auth
+          },
+          body: JSON.stringify({
+            migrationId: migration.id,
+            teamId: connection.teamId,
+          }),
+        });
+
+        const dryRunResult = await dryRunResponse.json();
+
+        if (dryRunResult.success) {
+          results.push({
+            migrationId: migration.id,
+            success: true,
+            changes: dryRunResult.changes || [],
+            duration: dryRunResult.duration || 0,
+          });
+          totalDuration += dryRunResult.duration || 0;
+        } else {
+          results.push({
+            migrationId: migration.id,
+            success: false,
+            error: dryRunResult.error || 'Dry run failed',
+          });
+        }
+      } catch (error) {
+        results.push({
+          migrationId: migration.id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Dry run request failed',
+        });
+      }
+    }
+
+    return {
+      success: results.every(r => r.success),
+      totalMigrations: migrations.length,
+      duration: totalDuration,
+      results,
+    };
+  }
+
+  private async performMigrationExecution(migrations: any[], connection: any): Promise<any> {
+    const results = [];
+    let totalDuration = 0;
+
+    for (const migrationData of migrations) {
+      // Find the actual migration record
+      const migration = await prisma.migration.findUnique({
+        where: { id: migrationData.id },
+        include: { databaseConnection: true },
+      });
+
+      if (!migration) {
+        results.push({
+          migrationId: migrationData.id,
+          success: false,
+          error: 'Migration not found',
+        });
+        continue;
+      }
+
+      // Check if migration can be executed
+      if (migration.status !== 'PENDING') {
+        results.push({
+          migrationId: migration.id,
+          success: false,
+          error: 'Migration is not in PENDING status',
+        });
+        continue;
+      }
+
+      try {
+        // Call the execute API
+        const executeResponse = await fetch(`${process.env.BETTER_AUTH_URL}/api/migrations/execute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer workflow-key`, // Need to get proper auth
+          },
+          body: JSON.stringify({
+            migrationId: migration.id,
+            teamId: connection.teamId,
+          }),
+        });
+
+        const executeResult = await executeResponse.json();
+
+        if (executeResult.success) {
+          results.push({
+            migrationId: migration.id,
+            success: true,
+            duration: executeResult.duration || 0,
+          });
+          totalDuration += executeResult.duration || 0;
+        } else {
+          results.push({
+            migrationId: migration.id,
+            success: false,
+            error: executeResult.error || 'Execution failed',
+          });
+        }
+      } catch (error) {
+        results.push({
+          migrationId: migration.id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Execution request failed',
+        });
+      }
+    }
+
+    return {
+      success: results.every(r => r.success),
+      executedMigrations: results.filter(r => r.success).length,
       totalMigrations: migrations.length,
       duration: totalDuration,
       results,

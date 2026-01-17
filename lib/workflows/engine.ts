@@ -26,6 +26,7 @@ export interface ExecutionContext {
   previousOutputs: Record<string, any>;
   connectionId?: string;
   teamId: string;
+  apiKey?: string;
 }
 
 export interface NodeExecutionResult {
@@ -238,7 +239,7 @@ export class WorkflowEngine {
   /**
    * Update execution status
    */
-  private static async updateExecutionStatus(
+  public static async updateExecutionStatus(
     executionId: string,
     status: WorkflowExecutionStatus,
     error?: string,
@@ -343,6 +344,198 @@ export class WorkflowEngine {
       error: exec.error,
       nodeCount: exec._count.nodeExecutions,
     }));
+  }
+
+  /**
+   * Resume a paused workflow execution
+   */
+  static async resume(executionId: string): Promise<{ success: boolean; status: WorkflowExecutionStatus }> {
+    try {
+      // Get execution with current state
+      const execution = await prisma.workflowExecution.findUnique({
+        where: { id: executionId },
+        include: {
+          workflow: {
+            include: {
+              definitions: {
+                where: { id: { not: undefined } },
+                take: 1
+              }
+            }
+          },
+          nodeExecutions: {
+            orderBy: { startedAt: 'asc' }
+          }
+        }
+      });
+
+      if (!execution) {
+        throw new Error(`Execution not found: ${executionId}`);
+      }
+
+      if (execution.status !== 'paused') {
+        return { success: false, status: execution.status as WorkflowExecutionStatus };
+      }
+
+      // Update status to running
+      await prisma.workflowExecution.update({
+        where: { id: executionId },
+        data: { status: 'running' }
+      });
+
+      // Resume execution asynchronously
+      this.resumeAsync(executionId, execution)
+        .catch(error => {
+          console.error(`Workflow resume failed: ${executionId}`, error);
+          this.updateExecutionStatus(executionId, 'failed', error.message);
+        });
+
+      return { success: true, status: 'running' };
+
+    } catch (error) {
+      console.error('Failed to resume workflow execution:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resume workflow execution asynchronously
+   */
+  private static async resumeAsync(
+    executionId: string,
+    execution: any
+  ): Promise<void> {
+    try {
+      const definition = execution.workflow.definitions[0];
+      if (!definition) {
+        throw new Error(`Workflow definition not found`);
+      }
+
+      // Parse workflow definition
+      const parsedDefinition = WorkflowParser.parse(definition.content, definition.format as 'json' | 'yaml');
+
+      // Get execution order
+      const executionOrder = WorkflowParser.getExecutionOrder(parsedDefinition.nodes, parsedDefinition.edges);
+
+      // Find the last completed node
+      const completedNodes = execution.nodeExecutions.filter((ne: any) => ne.status === 'success');
+      const lastCompletedNodeId = completedNodes.length > 0 ? completedNodes[completedNodes.length - 1].nodeId : null;
+
+      // Find the next node to execute
+      let startIndex = 0;
+      if (lastCompletedNodeId) {
+        const lastIndex = executionOrder.findIndex((node: any) => node.id === lastCompletedNodeId);
+        startIndex = lastIndex + 1;
+      }
+
+      // Prepare execution context
+      const context: ExecutionContext = {
+        workflowId: execution.workflowId,
+        executionId,
+        currentUser: { id: '', email: '', name: '' }, // Would need to be restored from context
+        variables: JSON.parse(execution.context || '{}'),
+        previousOutputs: {},
+        teamId: execution.workflow.teamId,
+      };
+
+      // Restore previous outputs
+      for (const nodeExec of completedNodes) {
+        if (nodeExec.output) {
+          context.previousOutputs[nodeExec.nodeId] = JSON.parse(nodeExec.output);
+        }
+      }
+
+      // Prepare variable context
+      const variableContext: TemplateContext = VariableEngine.createContext(
+        context.currentUser,
+        context.variables,
+        context.previousOutputs,
+        { connectionId: context.connectionId }
+      );
+
+      // Continue executing from the next node
+      for (let i = startIndex; i < executionOrder.length; i++) {
+        const node = executionOrder[i];
+        const nodeStartTime = Date.now();
+
+        try {
+          // Create node execution record
+          const nodeExecution = await prisma.nodeExecution.create({
+            data: {
+              executionId,
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeName: node.label,
+              status: 'running',
+              input: JSON.stringify(VariableEngine.resolveObject(node.data, variableContext)),
+            }
+          });
+
+          // Get executor for node type
+          const executor = this.executors.get(node.type);
+          if (!executor) {
+            throw new Error(`No executor found for node type: ${node.type}`);
+          }
+
+          // Execute node
+          const result = await executor.execute(
+            VariableEngine.resolveObject(node, variableContext),
+            context,
+            context.previousOutputs
+          );
+
+          // Update node execution record
+          await prisma.nodeExecution.update({
+            where: { id: nodeExecution.id },
+            data: {
+              status: result.success ? 'success' : 'failed',
+              output: JSON.stringify(result.output),
+              error: result.error,
+              duration: Date.now() - nodeStartTime,
+              completedAt: new Date(),
+            }
+          });
+
+          // Store output for next nodes
+          if (result.success) {
+            context.previousOutputs[node.id] = result.output;
+            variableContext.previousOutputs = context.previousOutputs;
+          } else {
+            // Handle failure
+            context.previousOutputs[node.id] = { error: result.error, success: false };
+          }
+
+        } catch (error) {
+          console.error(`Node execution failed: ${node.id}`, error);
+
+          // Update node execution with error
+          await prisma.nodeExecution.updateMany({
+            where: {
+              executionId,
+              nodeId: node.id,
+              status: 'running'
+            },
+            data: {
+              status: 'failed',
+              error: error instanceof Error ? error.message : 'Unknown error',
+              duration: Date.now() - nodeStartTime,
+              completedAt: new Date(),
+            }
+          });
+
+          // Mark workflow as failed
+          await this.updateExecutionStatus(executionId, 'failed', `Node ${node.id} failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return;
+        }
+      }
+
+      // Mark workflow as successful
+      await this.updateExecutionStatus(executionId, 'success', undefined, context.previousOutputs);
+
+    } catch (error) {
+      console.error(`Workflow resume failed: ${executionId}`, error);
+      await this.updateExecutionStatus(executionId, 'failed', error instanceof Error ? error.message : 'Unknown error');
+    }
   }
 
   /**

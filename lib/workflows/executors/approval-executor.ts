@@ -33,12 +33,11 @@ export class ApprovalExecutor implements NodeExecutor {
         }
       });
 
-      // For automatic approval in testing/demo, approve immediately
-      // In production, this would wait for actual user approval
-      // TODO: Remove this demo logic once proper approval workflow is implemented
-      // if (process.env.NODE_ENV === 'development') {
-      //   await ApprovalExecutor.autoApprove(approval.id, context.currentUser.id);
-      // }
+      // Pause the workflow execution
+      await prisma.workflowExecution.update({
+        where: { id: context.executionId },
+        data: { status: 'paused' }
+      });
 
       return {
         success: true,
@@ -146,7 +145,14 @@ export class ApprovalExecutor implements NodeExecutor {
           }
         });
 
-        // TODO: Resume workflow execution
+        // Resume workflow execution
+        const { WorkflowEngine } = await import('../engine');
+        await WorkflowEngine.resume(approval.executionId);
+
+        return {
+          success: true,
+          message: 'Approval granted and workflow resumed'
+        };
       }
 
       return {
@@ -205,9 +211,11 @@ export class ApprovalExecutor implements NodeExecutor {
         data: { status: 'REJECTED' }
       });
 
-      // TODO: Handle workflow rejection (fail execution or continue on rejection path)
+      // Fail the workflow execution on rejection
+      const { WorkflowEngine } = await import('../engine');
+      await WorkflowEngine.updateExecutionStatus(approval.executionId, 'failed', `Approval rejected by ${userId}${comment ? `: ${comment}` : ''}`);
 
-      return { success: true, message: 'Approval rejected' };
+      return { success: true, message: 'Approval rejected and workflow failed' };
 
     } catch (error) {
       console.error('Rejection failed:', error);
