@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 // Initialize BetterAuth with comprehensive configuration
 export const auth = betterAuth({
     appName: "dataroll",
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: "https://fun-five-psi.vercel.app/",
     basePath: "/api/auth",
     secret: process.env.BETTER_AUTH_SECRET,
       database: prismaAdapter(prisma, {
@@ -55,9 +55,9 @@ export const auth = betterAuth({
         
         // Passkey/WebAuthn support
         passkey({
-            rpID: process.env.NODE_ENV === "production" ? "your-domain.com" : "localhost",
+            rpID: process.env.NODE_ENV === "production" ? "https://fun-five-psi.vercel.app/" : "localhost",
             rpName: "dataroll",
-            origin: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+            origin: process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app/",
             authenticatorSelection: {
                 residentKey: "preferred",
                 userVerification: "preferred"
