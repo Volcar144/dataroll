@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,6 +9,7 @@ datasource db {
 }
 
 // BetterAuth Models
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -22,28 +24,33 @@ model User {
   sessions Session[]
 
   // dataroll specific relations
-  teamMembers       TeamMember[]
-  createdTeams      Team[]             @relation("TeamCreator")
-  databaseConnections DatabaseConnection[]
-  migrations        Migration[]
-  auditLogs         AuditLog[]
+  teamMembers             TeamMember[]
+  createdTeams            Team[]                   @relation("TeamCreator")
+  databaseConnections     DatabaseConnection[]
+  migrations              Migration[]
+  auditLogs               AuditLog[]
   notificationPreferences NotificationPreferences?
-  autoApprovalRules AutoApprovalRule[]
-  apiKeys           ApiKey[]
-  twoFactorAuth     TwoFactorAuth?
-  passkeyCredentials PasskeyCredential[]
-  teamInvitations   TeamInvitation[]  @relation("UserInvitations")
-  requestedApprovals MigrationApproval[] @relation("ApprovalRequester")
-  givenApprovals    MigrationApproval[] @relation("ApprovalApprover")
-  scheduledExecutions ScheduledExecution[]
-  webhooks          Webhook[]             @relation("UserWebhooks")
-  pendingQueries    PendingQuery[]
-  proxyConnections  ProxyConnection[]
-  approvedQueries   PendingQuery[]      @relation("QueryApprover")
-  workflowDefinitions WorkflowDefinition[]
-  workflowApprovals  WorkflowApproval[] @relation("WorkflowApprover")
-  approvalResponses  ApprovalResponse[]
-  createdWorkflows   Workflow[]         @relation("WorkflowCreator")
+  autoApprovalRules       AutoApprovalRule[]
+  apiKeys                 ApiKey[]
+  twoFactorAuth           TwoFactorAuth?
+  passkeyCredentials      PasskeyCredential[]
+  teamInvitations         TeamInvitation[]         @relation("UserInvitations")
+  requestedApprovals      MigrationApproval[]      @relation("ApprovalRequester")
+  givenApprovals          MigrationApproval[]      @relation("ApprovalApprover")
+  scheduledExecutions     ScheduledExecution[]
+  webhooks                Webhook[]                @relation("UserWebhooks")
+  pendingQueries          PendingQuery[]
+  proxyConnections        ProxyConnection[]
+  approvedQueries         PendingQuery[]           @relation("QueryApprover")
+  workflowDefinitions     WorkflowDefinition[]
+  workflowApprovals       WorkflowApproval[]       @relation("WorkflowApprover")
+  approvalResponses       ApprovalResponse[]
+  createdWorkflows        Workflow[]               @relation("WorkflowCreator")
+
+  twoFactorEnabled Boolean?    @default(false)
+  passkeys         Passkey[]
+  twofactors       TwoFactor[]
+  apikeys          Apikey[]
 
   @@map("users")
 }
@@ -64,8 +71,20 @@ model Account {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
   @@unique([provider, providerAccountId])
   @@map("accounts")
+  @@index([userId])
 }
 
 model Session {
@@ -75,7 +94,16 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+
   @@map("sessions")
+  @@unique([token])
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -88,6 +116,7 @@ model VerificationToken {
 }
 
 // dataroll-specific models
+
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -97,18 +126,18 @@ model Team {
   updatedAt   DateTime @updatedAt
   createdById String
 
-  createdBy User @relation("TeamCreator", fields: [createdById], references: [id])
-  members   TeamMember[]
+  createdBy           User                 @relation("TeamCreator", fields: [createdById], references: [id])
+  members             TeamMember[]
   databaseConnections DatabaseConnection[]
-  migrations Migration[]
-  auditLogs AuditLog[]
-  invitations TeamInvitation[]
-  permissions TeamPermission[]
-  webhooks Webhook[]
+  migrations          Migration[]
+  auditLogs           AuditLog[]
+  invitations         TeamInvitation[]
+  permissions         TeamPermission[]
+  webhooks            Webhook[]
   scheduledExecutions ScheduledExecution[]
-  autoApprovalRules AutoApprovalRule[]
-  apiKeys ApiKey[]
-  workflows Workflow[]
+  autoApprovalRules   AutoApprovalRule[]
+  apiKeys             ApiKey[]
+  workflows           Workflow[]
 
   @@map("teams")
 }
@@ -141,19 +170,16 @@ enum Permission {
   TEAM_MANAGE
   TEAM_INVITE
   TEAM_REMOVE_MEMBER
-  
   // Database connections
   CONNECTION_CREATE
   CONNECTION_UPDATE
   CONNECTION_DELETE
   CONNECTION_TEST
-  
   // Migrations
   MIGRATION_CREATE
   MIGRATION_EXECUTE
   MIGRATION_ROLLBACK
   MIGRATION_APPROVE
-  
   // Audit
   AUDIT_VIEW
 }
@@ -179,16 +205,16 @@ enum Environment {
 }
 
 model TeamInvitation {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   teamId      String
   email       String
   role        TeamRole
   invitedById String
-  token       String   @unique
+  token       String           @unique
   status      InvitationStatus @default(PENDING)
   expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   invitedBy User @relation("UserInvitations", fields: [invitedById], references: [id])
@@ -197,11 +223,11 @@ model TeamInvitation {
 }
 
 model TeamPermission {
-  id         String   @id @default(cuid())
+  id         String     @id @default(cuid())
   teamId     String
   role       TeamRole
   permission Permission
-  createdAt  DateTime @default(now())
+  createdAt  DateTime   @default(now())
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
@@ -210,7 +236,7 @@ model TeamPermission {
 }
 
 model MigrationApproval {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   migrationId   String
   requestedById String
   approvedById  String?
@@ -218,8 +244,8 @@ model MigrationApproval {
   comments      String?
   approvedAt    DateTime?
   expiresAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   migration   Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
   requestedBy User      @relation("ApprovalRequester", fields: [requestedById], references: [id])
@@ -229,21 +255,21 @@ model MigrationApproval {
 }
 
 model ScheduledExecution {
-  id            String   @id @default(cuid())
-  migrationId   String
-  teamId        String
+  id                   String          @id @default(cuid())
+  migrationId          String
+  teamId               String
   databaseConnectionId String
-  scheduledById String
-  scheduledFor  DateTime
-  executedAt    DateTime?
-  status        ExecutionStatus @default(PENDING)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  scheduledById        String
+  scheduledFor         DateTime
+  executedAt           DateTime?
+  status               ExecutionStatus @default(PENDING)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
-  migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
-  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  migration          Migration          @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
   databaseConnection DatabaseConnection @relation(fields: [databaseConnectionId], references: [id], onDelete: Cascade)
-  scheduledBy User @relation(fields: [scheduledById], references: [id])
+  scheduledBy        User               @relation(fields: [scheduledById], references: [id])
 
   @@unique([migrationId, scheduledFor])
   @@map("scheduled_executions")
@@ -261,26 +287,26 @@ model Webhook {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy User @relation("UserWebhooks", fields: [createdById], references: [id])
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy  User              @relation("UserWebhooks", fields: [createdById], references: [id])
   deliveries WebhookDelivery[]
 
   @@map("webhooks")
 }
 
 model WebhookDelivery {
-  id         String   @id @default(cuid())
-  webhookId  String
-  event      String
-  payload    String   @db.Text
-  signature  String?
-  response   String?  @db.Text
-  statusCode Int?
-  status     String?  @default("PENDING")
-  error      String?
-  success    Boolean  @default(false)
+  id          String    @id @default(cuid())
+  webhookId   String
+  event       String
+  payload     String    @db.Text
+  signature   String?
+  response    String?   @db.Text
+  statusCode  Int?
+  status      String?   @default("PENDING")
+  error       String?
+  success     Boolean   @default(false)
   deliveredAt DateTime?
-  createdAt  DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
@@ -288,34 +314,34 @@ model WebhookDelivery {
 }
 
 model DatabaseConnection {
-  id           String   @id @default(cuid())
-  name         String
-  type         DatabaseType
-  host         String
-  port         Int?
-  database    String
-  username    String
-  password    String   // encrypted
-  ssl         Boolean  @default(false)
-  url         String?  // direct connection string
-  environment Environment @default(DEVELOPMENT)
-  requiresApproval Boolean @default(false)
-  isActive    Boolean  @default(true)
-  healthStatus ConnectionHealthStatus @default(UNKNOWN)
-  lastHealthCheck DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  teamId      String
-  createdById String
+  id               String                 @id @default(cuid())
+  name             String
+  type             DatabaseType
+  host             String
+  port             Int?
+  database         String
+  username         String
+  password         String // encrypted
+  ssl              Boolean                @default(false)
+  url              String? // direct connection string
+  environment      Environment            @default(DEVELOPMENT)
+  requiresApproval Boolean                @default(false)
+  isActive         Boolean                @default(true)
+  healthStatus     ConnectionHealthStatus @default(UNKNOWN)
+  lastHealthCheck  DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  teamId           String
+  createdById      String
 
-  team      Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  createdBy User          @relation(fields: [createdById], references: [id])
-  migrations Migration[]
+  team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdBy           User                 @relation(fields: [createdById], references: [id])
+  migrations          Migration[]
   scheduledExecutions ScheduledExecution[]
-  errors    DatabaseError[]
-  pendingQueries PendingQuery[]
-  proxyConnections ProxyConnection[]
-  autoApprovalRules AutoApprovalRule[]
+  errors              DatabaseError[]
+  pendingQueries      PendingQuery[]
+  proxyConnections    ProxyConnection[]
+  autoApprovalRules   AutoApprovalRule[]
 
   @@map("database_connections")
 }
@@ -333,13 +359,13 @@ enum ConnectionHealthStatus {
 }
 
 model DatabaseError {
-  id         String   @id @default(cuid())
+  id           String   @id @default(cuid())
   connectionId String
-  operation  String   // e.g., "connection_test", "migration_execute", "query"
-  errorType  String   // e.g., "connection_failed", "query_error", "timeout"
-  message    String   @db.Text
-  details    String?  @db.Text // additional error details, stack trace, etc.
-  occurredAt DateTime @default(now())
+  operation    String // e.g., "connection_test", "migration_execute", "query"
+  errorType    String // e.g., "connection_failed", "query_error", "timeout"
+  message      String   @db.Text
+  details      String?  @db.Text // additional error details, stack trace, etc.
+  occurredAt   DateTime @default(now())
 
   connection DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
@@ -347,29 +373,29 @@ model DatabaseError {
 }
 
 model Migration {
-  id          String            @id @default(cuid())
-  name        String
-  version     String
-  type        MigrationType
-  filePath    String
-  content     String            @db.Text
-  status      MigrationStatus   @default(PENDING)
-  checksum    String?
-  notes       String?           @db.Text
-  executedAt  DateTime?
-  rolledBackAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  teamId      String
+  id                   String          @id @default(cuid())
+  name                 String
+  version              String
+  type                 MigrationType
+  filePath             String
+  content              String          @db.Text
+  status               MigrationStatus @default(PENDING)
+  checksum             String?
+  notes                String?         @db.Text
+  executedAt           DateTime?
+  rolledBackAt         DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  teamId               String
   databaseConnectionId String
-  createdById String
+  createdById          String
 
-  team               Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  databaseConnection DatabaseConnection  @relation(fields: [databaseConnectionId], references: [id], onDelete: Cascade)
-  createdBy          User               @relation(fields: [createdById], references: [id])
-  executions         MigrationExecution[]
-  rollbacks          MigrationRollback[]
-  approvals          MigrationApproval[]
+  team                Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  databaseConnection  DatabaseConnection   @relation(fields: [databaseConnectionId], references: [id], onDelete: Cascade)
+  createdBy           User                 @relation(fields: [createdById], references: [id])
+  executions          MigrationExecution[]
+  rollbacks           MigrationRollback[]
+  approvals           MigrationApproval[]
   scheduledExecutions ScheduledExecution[]
 
   @@unique([teamId, version, databaseConnectionId])
@@ -391,12 +417,12 @@ enum MigrationStatus {
 }
 
 model MigrationExecution {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   migrationId String
   status      ExecutionStatus
-  duration    Int?     // in milliseconds
-  error       String?  @db.Text
-  executedAt  DateTime @default(now())
+  duration    Int? // in milliseconds
+  error       String?         @db.Text
+  executedAt  DateTime        @default(now())
   executedBy  String
 
   migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
@@ -412,12 +438,12 @@ enum ExecutionStatus {
 }
 
 model MigrationRollback {
-  id              String   @id @default(cuid())
-  migrationId     String
-  reason          String?
-  rolledBackAt    DateTime @default(now())
-  rolledBackBy    String
-  backupLocation  String?
+  id             String   @id @default(cuid())
+  migrationId    String
+  reason         String?
+  rolledBackAt   DateTime @default(now())
+  rolledBackBy   String
+  backupLocation String?
 
   migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
 
@@ -425,16 +451,16 @@ model MigrationRollback {
 }
 
 model AuditLog {
-  id        String     @id @default(cuid())
-  action    AuditAction
-  resource  String
+  id         String      @id @default(cuid())
+  action     AuditAction
+  resource   String
   resourceId String?
-  details   String?    @db.Text
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime   @default(now())
-  teamId    String
-  userId    String
+  details    String?     @db.Text
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  teamId     String
+  userId     String
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id])
@@ -461,13 +487,13 @@ enum AuditAction {
 }
 
 model TwoFactorAuth {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  enabled   Boolean  @default(false)
-  secret    String?
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  enabled     Boolean  @default(false)
+  secret      String?
   backupCodes String[] @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -475,16 +501,16 @@ model TwoFactorAuth {
 }
 
 model PasskeyCredential {
-  id              String   @id @default(cuid())
-  userId          String
-  name            String?
-  publicKey       String   @db.Text
-  counter         BigInt   @default(0)
-  deviceType      String?
-  backedUp        Boolean  @default(false)
-  transports      String[] @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  name       String?
+  publicKey  String   @db.Text
+  counter    BigInt   @default(0)
+  deviceType String?
+  backedUp   Boolean  @default(false)
+  transports String[] @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -511,8 +537,8 @@ model AutoApprovalRule {
   userId       String
   connectionId String?
   teamId       String?
-  queryPattern String?  // Regex pattern to match queries
-  maxRows      Int?     // Maximum rows allowed for auto-approval
+  queryPattern String? // Regex pattern to match queries
+  maxRows      Int? // Maximum rows allowed for auto-approval
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -525,24 +551,24 @@ model AutoApprovalRule {
 }
 
 model ApiKey {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  name        String?
-  userId      String
-  teamId      String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String?
+  userId    String
+  teamId    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@map("api_keys")
 }
 
 model PendingQuery {
-  id           String   @id @default(cuid())
-  query        String   @db.Text
+  id           String      @id @default(cuid())
+  query        String      @db.Text
   params       Json?
   connectionId String
   userId       String
@@ -552,12 +578,12 @@ model PendingQuery {
   executedAt   DateTime?
   result       Json?
   error        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  connection   DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  user         User               @relation(fields: [userId], references: [id])
-  approvedBy   User?              @relation("QueryApprover", fields: [approvedById], references: [id])
+  connection DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id])
+  approvedBy User?              @relation("QueryApprover", fields: [approvedById], references: [id])
 
   @@map("pending_queries")
 }
@@ -571,8 +597,8 @@ model ProxyConnection {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  connection   DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  user         User               @relation(fields: [userId], references: [id])
+  connection DatabaseConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id])
 
   @@map("proxy_connections")
 }
@@ -586,22 +612,23 @@ enum QueryStatus {
 }
 
 // Workflow System Models
+
 model Workflow {
-  id String @id @default(cuid())
-  teamId String
-  name String
+  id          String  @id @default(cuid())
+  teamId      String
+  name        String
   description String? @db.Text
 
   // Current workflow definition
   definitionId String @unique
 
   // Versioning
-  version Int @default(1)
-  isPublished Boolean @default(false)
+  version     Int       @default(1)
+  isPublished Boolean   @default(false)
   publishedAt DateTime?
 
   // Metadata
-  tags String[] @default([])
+  tags    String[] @default([])
   trigger String // "manual", "scheduled", "webhook", "event"
 
   // Tracking
@@ -609,44 +636,44 @@ model Workflow {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team        Team                 @relation(fields: [teamId], references: [id], onDelete: Cascade)
   definitions WorkflowDefinition[]
-  executions WorkflowExecution[]
-  triggers WorkflowTrigger[]
-  variables WorkflowVariable[]
-  approvals WorkflowApproval[]
-  creator User @relation("WorkflowCreator", fields: [createdBy], references: [id])
+  executions  WorkflowExecution[]
+  triggers    WorkflowTrigger[]
+  variables   WorkflowVariable[]
+  approvals   WorkflowApproval[]
+  creator     User                 @relation("WorkflowCreator", fields: [createdBy], references: [id])
 
   @@map("workflows")
 }
 
 model WorkflowDefinition {
-  id String @id @default(cuid())
+  id         String @id @default(cuid())
   workflowId String
 
   // YAML/JSON storage
   content String @db.Text // Full workflow definition
-  format String @default("json") // "json" or "yaml"
+  format  String @default("json") // "json" or "yaml"
 
   // Metadata
   nodes String @db.Text // Serialized nodes array
   edges String @db.Text // Serialized edges array
 
   // Version control
-  version Int
+  version   Int
   changelog String? @db.Text
 
   createdAt DateTime @default(now())
   createdBy String
 
   workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  creator User @relation(fields: [createdBy], references: [id])
+  creator  User     @relation(fields: [createdBy], references: [id])
 
   @@map("workflow_definitions")
 }
 
 model WorkflowExecution {
-  id String @id @default(cuid())
+  id         String @id @default(cuid())
   workflowId String
 
   // Execution state
@@ -654,18 +681,18 @@ model WorkflowExecution {
 
   // Triggers
   triggeredBy String // userId or "schedule" or "webhook"
-  triggeredAt DateTime @default(now())
-  startedAt DateTime?
+  triggeredAt DateTime  @default(now())
+  startedAt   DateTime?
   completedAt DateTime?
 
   // Execution data
-  context String @db.Text // Input variables/context
-  output String? @db.Text // Final output
-  error String? @db.Text // Error details
+  context String  @db.Text // Input variables/context
+  output  String? @db.Text // Final output
+  error   String? @db.Text // Error details
 
   // Tracking
   nodeExecutions NodeExecution[]
-  approvals WorkflowApproval[]
+  approvals      WorkflowApproval[]
 
   workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
@@ -673,11 +700,11 @@ model WorkflowExecution {
 }
 
 model NodeExecution {
-  id String @id @default(cuid())
+  id          String @id @default(cuid())
   executionId String
 
   // Node identification
-  nodeId String
+  nodeId   String
   nodeType String // "trigger", "action", "condition", "approval", "notification", etc
   nodeName String
 
@@ -685,18 +712,18 @@ model NodeExecution {
   status String // "pending", "running", "success", "failed", "skipped"
 
   // Data flow
-  input String @db.Text // Input to this node
+  input  String  @db.Text // Input to this node
   output String? @db.Text // Output from this node
-  error String? @db.Text // Error if failed
+  error  String? @db.Text // Error if failed
 
   // Timing
-  startedAt DateTime?
+  startedAt   DateTime?
   completedAt DateTime?
-  duration Int? // milliseconds
+  duration    Int? // milliseconds
 
   // Retry info
-  retryCount Int @default(0)
-  retryable Boolean @default(false)
+  retryCount Int     @default(0)
+  retryable  Boolean @default(false)
 
   execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
 
@@ -704,11 +731,11 @@ model NodeExecution {
 }
 
 model WorkflowTrigger {
-  id String @id @default(cuid())
+  id         String @id @default(cuid())
   workflowId String
 
   // Trigger configuration
-  type String // "manual", "scheduled", "webhook", "on_event"
+  type   String // "manual", "scheduled", "webhook", "on_event"
   config String @db.Text // Trigger-specific config (cron, event filter, webhook key, etc)
 
   isActive Boolean @default(true)
@@ -722,14 +749,14 @@ model WorkflowTrigger {
 }
 
 model WorkflowVariable {
-  id String @id @default(cuid())
+  id         String @id @default(cuid())
   workflowId String
 
-  name String
-  type String // "string", "number", "boolean", "object", "secret"
+  name         String
+  type         String // "string", "number", "boolean", "object", "secret"
   defaultValue String? @db.Text
-  description String? @db.Text
-  isSecret Boolean @default(false)
+  description  String? @db.Text
+  isSecret     Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -741,48 +768,135 @@ model WorkflowVariable {
 }
 
 model WorkflowApproval {
-  id String @id @default(cuid())
-  workflowId String
+  id          String @id @default(cuid())
+  workflowId  String
   executionId String
-  nodeId String
-  nodeName String
+  nodeId      String
+  nodeName    String
 
-  status ApprovalStatus @default(PENDING)
-  approvalType String // "any", "majority", "unanimous"
-  approvers String[] // User IDs
+  status            ApprovalStatus @default(PENDING)
+  approvalType      String // "any", "majority", "unanimous"
+  approvers         String[] // User IDs
   requiredApprovals Int
-  timeoutMinutes Int?
-  message String? @db.Text
-  context String? @db.Text // JSON context data
+  timeoutMinutes    Int?
+  message           String?        @db.Text
+  context           String?        @db.Text // JSON context data
 
-  approvedBy String? // User ID who approved
-  approvedAt DateTime?
-  rejectionReason String? @db.Text
+  approvedBy      String? // User ID who approved
+  approvedAt      DateTime?
+  rejectionReason String?   @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  workflow  Workflow           @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  execution WorkflowExecution  @relation(fields: [executionId], references: [id], onDelete: Cascade)
   approvals ApprovalResponse[]
-  approver User? @relation("WorkflowApprover", fields: [approvedBy], references: [id])
+  approver  User?              @relation("WorkflowApprover", fields: [approvedBy], references: [id])
 
   @@map("workflow_approvals")
 }
 
 model ApprovalResponse {
-  id String @id @default(cuid())
+  id         String @id @default(cuid())
   approvalId String
 
-  userId String
+  userId   String
   decision String // "approved", "rejected"
-  comment String? @db.Text
+  comment  String? @db.Text
 
   createdAt DateTime @default(now())
 
   approval WorkflowApproval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
+  user     User             @relation(fields: [userId], references: [id])
 
   @@unique([approvalId, userId])
   @@map("approval_responses")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Passkey {
+  id           String    @id
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime?
+  aaguid       String?
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
+}
+
+model TwoFactor {
+  id          String @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
+}
+
+model DeviceCode {
+  id              String    @id
+  deviceCode      String
+  userCode        String
+  userId          String?
+  expiresAt       DateTime
+  status          String
+  lastPolledAt    DateTime?
+  pollingInterval Int?
+  clientId        String?
+  scope           String?
+
+  @@map("deviceCode")
+}
+
+model Apikey {
+  id                  String    @id
+  name                String?
+  start               String?
+  prefix              String?
+  key                 String
+  userId              String
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refillInterval      Int?
+  refillAmount        Int?
+  lastRefillAt        DateTime?
+  enabled             Boolean?  @default(true)
+  rateLimitEnabled    Boolean?  @default(true)
+  rateLimitTimeWindow Int?      @default(86400000)
+  rateLimitMax        Int?      @default(10)
+  requestCount        Int?      @default(0)
+  remaining           Int?
+  lastRequest         DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime
+  updatedAt           DateTime
+  permissions         String?
+  metadata            String?
+
+  @@index([key])
+  @@index([userId])
+  @@map("apikey")
 }

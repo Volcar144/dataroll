@@ -70,15 +70,15 @@ export const auth = betterAuth({
             skipVerificationOnEnable: false
         }),
 
-        // Organization management
-        organization({
-            allowUserToCreateOrganization: true,
-            teams: {
-                enabled: true,
-                maximumTeams: 10,
-                allowRemovingAllTeams: false
-            }
-        }),
+        // Organization management - DISABLED to avoid conflicts with custom team system
+        // organization({
+        //     allowUserToCreateOrganization: true,
+        //     teams: {
+        //         enabled: true,
+        //         maximumTeams: 10,
+        //         allowRemovingAllTeams: false
+        //     }
+        // }),
 
         // Device authorization for CLI login
         deviceAuthorization({
