@@ -5,6 +5,7 @@ import { createDataRollClient, login } from '../index';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { execSync } from 'child_process';
 
 const program = new Command();
 
@@ -47,6 +48,35 @@ function getBaseUrl() {
 
 function getTeamId() {
   return program.opts().teamId || loadConfig().teamId;
+}
+
+export function readFileSafely(filePath: string): string {
+  // Resolve the path to prevent directory traversal attacks
+  const resolvedPath = path.resolve(filePath);
+
+  // Find the repository root (git directory)
+  let repoRoot = process.cwd();
+  try {
+    const gitDir = require('child_process').execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+    repoRoot = path.resolve(gitDir);
+  } catch (error) {
+    // If git command fails, fall back to current working directory
+    // This maintains backward compatibility
+  }
+
+  // Ensure the resolved path is within the repository root
+  // This prevents access to files outside the project while allowing
+  // relative paths within the repo (common in CI/CD scenarios)
+  if (!resolvedPath.startsWith(repoRoot)) {
+    throw new Error('File path must be within the repository root directory');
+  }
+
+  // Check if file exists
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+
+  return fs.readFileSync(resolvedPath, 'utf8');
 }
 
 program
@@ -175,7 +205,7 @@ program
     try {
       let content = '';
       if (options.file) {
-        content = fs.readFileSync(options.file, 'utf8');
+        content = readFileSafely(options.file);
       } else {
         console.error('SQL file required. Use -f or --file option.');
         process.exit(1);
@@ -333,11 +363,7 @@ program
     try {
       let content = '';
       if (options.file) {
-        if (options.file.includes('..')) {
-          console.error('Error: Invalid file path');
-          process.exit(1);
-        }
-        content = fs.readFileSync(options.file, 'utf8');
+        content = readFileSafely(options.file);
       } else {
         console.error('SQL file required. Use -f or --file option.');
         process.exit(1);
