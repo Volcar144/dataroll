@@ -4,6 +4,11 @@ import { twoFactorClient, organizationClient, deviceAuthorizationClient } from "
 
 // Create BetterAuth client instance with all plugins
 export const authClient = createAuthClient({
+    account: {
+        accountLinking: {
+            trustedProviders: ["google", "github", "discord"]
+        }
+    },
     baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app",
     plugins: [
         // Passkey/WebAuthn support
