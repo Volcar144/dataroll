@@ -2,7 +2,6 @@
 
 A comprehensive database migration manager SaaS platform with support for both Prisma and Drizzle ORM, featuring multi-team support, migration versioning, validation, and rollback capabilities.
 
-#
 ## Features
 
 - 🔐 **Advanced Authentication** - Complete BetterAuth implementation with all plugins
