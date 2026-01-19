@@ -85,6 +85,7 @@ model Account {
   password String?
 
   @@unique([provider, providerAccountId])
+  @@unique([accountId, providerId])
   @@map("accounts")
   @@index([userId])
 }

@@ -14,12 +14,14 @@ Both sets of fields exist in the schema for compatibility, but Better Auth doesn
 - `type` field: Changed from `String` to `String?` (nullable)
 - `provider` field: Changed from `String` to `String?` (nullable)
 - `providerAccountId` field: Changed from `String` to `String?` (nullable)
+- Added unique constraint on `[accountId, providerId]` for Better Auth account uniqueness
 
 ## SQL
 ```sql
 ALTER TABLE "accounts" ALTER COLUMN "type" DROP NOT NULL;
 ALTER TABLE "accounts" ALTER COLUMN "provider" DROP NOT NULL;
 ALTER TABLE "accounts" ALTER COLUMN "providerAccountId" DROP NOT NULL;
+CREATE UNIQUE INDEX "accounts_accountId_providerId_key" ON "accounts"("accountId", "providerId");
 ```
 
 ## Impact
