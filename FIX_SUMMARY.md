@@ -32,7 +32,7 @@ Made the NextAuth-specific fields optional to allow Better Auth to create accoun
 - ✅ Backward compatible - NextAuth-style flows can still populate these fields if needed
 
 ### Considerations
-- The unique constraint `@@unique([provider, providerAccountId])` remains in place. Since both fields are now nullable, PostgreSQL treats NULL values as distinct, so multiple accounts with NULL values won't violate the constraint.
+- The unique constraint `@@unique([provider, providerAccountId])` remains in place. However, since both fields are now nullable and Better Auth doesn't populate them, all Better Auth accounts will have NULL values for these fields. PostgreSQL's handling of NULL in unique constraints means that depending on the PostgreSQL version, either only one or multiple NULL pairs may be allowed. This should not cause issues since Better Auth accounts use the separate `@@unique([accountId, providerId])` constraint for uniqueness.
 - If there are any code paths that assume these fields are always present, they would need to be updated to handle null values. A grep search showed no direct references to `account.type` in the codebase.
 
 ## Testing Performed
