@@ -6,7 +6,7 @@ import { deviceAuthorizationClient } from "better-auth/client/plugins";
 // Configuration schema
 const ConfigSchema = z.object({
   apiKey: z.string(),
-  baseUrl: z.string().optional().default('https://dataroll.archiem.top/api'),
+  baseUrl: z.string().optional().default('https://fun-five-psi.vercel.app/api'),
   teamId: z.string().optional(),
 });
 
@@ -88,12 +88,14 @@ export class DataRollClient {
     url?: string;
   }) {
     const response = await this.client.post('/connections', data);
-    return ConnectionSchema.parse(response.data);
+    const result = response.data.data || response.data;
+    return ConnectionSchema.parse(result);
   }
 
   async getConnections() {
     const response = await this.client.get('/connections');
-    return z.array(ConnectionSchema).parse(response.data);
+    const result = response.data.data || response.data;
+    return z.array(ConnectionSchema).parse(result);
   }
 
   async testConnection(connectionId: string) {
@@ -108,7 +110,8 @@ export class DataRollClient {
     content: string;
   }) {
     const response = await this.client.post(`/connections/${connectionId}/migrations`, data);
-    return MigrationSchema.parse(response.data);
+    const result = response.data.data || response.data;
+    return MigrationSchema.parse(result);
   }
 
   async executeMigration(connectionId: string, migrationId: string) {
@@ -125,13 +128,15 @@ export class DataRollClient {
 
   async getMigrations(connectionId: string) {
     const response = await this.client.get(`/connections/${connectionId}/migrations`);
-    return z.array(MigrationSchema).parse(response.data);
+    const result = response.data.data || response.data;
+    return z.array(MigrationSchema).parse(result);
   }
 
   // Monitoring
   async getHealthStatus(connectionId: string) {
     const response = await this.client.get(`/connections/${connectionId}/monitoring`);
-    return HealthStatusSchema.parse(response.data.health);
+    const result = response.data.data || response.data;
+    return HealthStatusSchema.parse(result.health || result);
   }
 
   async performHealthCheck(connectionId: string) {
@@ -150,7 +155,8 @@ export class DataRollClient {
     if (options?.errorType) params.append('errorType', options.errorType);
 
     const response = await this.client.get(`/connections/${connectionId}/monitoring/errors?${params}`);
-    return z.array(ErrorSchema).parse(response.data);
+    const result = response.data.data || response.data;
+    return z.array(ErrorSchema).parse(result);
   }
 
   // Team Monitoring

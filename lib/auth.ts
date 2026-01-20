@@ -50,14 +50,14 @@ export const auth = betterAuth({
     plugins: [
         // Check password against known breaches
         haveIBeenPwned({
-            customPasswordCompromisedMessage: "This password has been compromised. Please choose a different one."
+            customPasswordCompromisedMessage: "This password has been found in a data breach and cannot be used. Please choose a different, stronger password (minimum 12 characters)."
         }),
         
         // Passkey/WebAuthn support
         passkey({
-            rpID: process.env.NODE_ENV === "production" ? "https://fun-five-psi.vercel.app/" : "localhost",
+            rpID: process.env.NODE_ENV === "production" ? "fun-five-psi.vercel.app" : "localhost",
             rpName: "dataroll",
-            origin: process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app/",
+            origin: process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app",
             authenticatorSelection: {
                 residentKey: "preferred",
                 userVerification: "preferred"

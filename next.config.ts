@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -62,4 +63,20 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
 };
 
-export default nextConfig;
+// Only enable PostHog source maps if we have valid API credentials
+const shouldEnableSourceMaps = 
+  process.env.POSTHOG_API_KEY?.startsWith('phx_') && 
+  process.env.POSTHOG_ENV_ID;
+
+export default shouldEnableSourceMaps
+  ? withPostHogConfig(nextConfig, {
+      personalApiKey: process.env.POSTHOG_API_KEY!, // Personal API Key (starts with phx_)
+      envId: process.env.POSTHOG_ENV_ID!, // Environment ID
+      host: process.env.NEXT_PUBLIC_POSTHOG_HOST, // PostHog instance URL
+      sourcemaps: {
+        enabled: process.env.NODE_ENV === 'production', // Enable on production builds
+        project: "dataroll", // Project name
+        deleteAfterUpload: true, // Delete sourcemaps after upload
+      },
+    })
+  : nextConfig;

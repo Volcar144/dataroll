@@ -86,9 +86,16 @@ export class AuthService {
       })
 
       if (result.error) {
+        let errorMessage = result.error.message || "Sign up failed"
+        
+        // Improve password breach error message
+        if (errorMessage.toLowerCase().includes("breach") || errorMessage.toLowerCase().includes("compromised")) {
+          errorMessage = "This password has been found in a data breach. Please choose a different, stronger password (minimum 12 characters)."
+        }
+        
         return {
           success: false,
-          error: result.error.message || "Sign up failed",
+          error: errorMessage,
         }
       }
 
@@ -97,9 +104,19 @@ export class AuthService {
         data: result.data,
       }
     } catch (error) {
+      let errorMessage = "An unexpected error occurred"
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+        // Improve password breach error message in exceptions too
+        if (errorMessage.toLowerCase().includes("breach") || errorMessage.toLowerCase().includes("compromised")) {
+          errorMessage = "This password has been found in a data breach. Please choose a different, stronger password (minimum 12 characters)."
+        }
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
+        error: errorMessage,
       }
     }
   }

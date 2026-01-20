@@ -43,7 +43,7 @@ function getApiKey() {
 }
 
 function getBaseUrl() {
-  return program.opts().baseUrl || loadConfig().baseUrl || 'https://dataroll.archiem.top/api';
+  return program.opts().baseUrl || loadConfig().baseUrl || 'https://fun-five-psi.vercel.app/api';
 }
 
 function getTeamId() {
@@ -93,7 +93,7 @@ program
   .option('-u, --base-url <url>', 'DataRoll API base URL')
   .action(async (options) => {
     try {
-      const baseUrl = options.baseUrl || 'https://dataroll.archhiem.top/api';
+      const baseUrl = options.baseUrl || 'https://fun-five-psi.vercel.app/api';
       const result = await login({ baseUrl });
 
       // Save to config

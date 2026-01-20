@@ -1,6 +1,6 @@
 {
   "name": "@dataroll/sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "DataRoll SDK for easy database management, migrations, rollbacks, and monitoring",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,9 +39,11 @@
     "url": "https://github.com/Volcar144/fun/issues"
   },
   "dependencies": {
+    "@dataroll/sdk": "^1.0.1",
     "axios": "^1.6.0",
     "better-auth": "^1.0.0",
     "commander": "^11.0.0",
+    "latest": "^0.2.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
