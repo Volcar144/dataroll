@@ -8,6 +8,23 @@ import { useEffect } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help"
 import { useShortcut } from "@/lib/keyboard-shortcuts"
+import { 
+  Database, 
+  GitBranch, 
+  Shield, 
+  Activity, 
+  Users, 
+  Workflow, 
+  FileText, 
+  BarChart3,
+  Settings,
+  Bell,
+  ArrowRight,
+  CheckCircle2,
+  Zap,
+  Lock,
+  Globe
+} from "lucide-react"
 
 function LandingPage() {
   const router = useRouter();
@@ -94,100 +111,87 @@ function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="px-6 py-20 bg-white">
+      <section id="features" className="px-6 py-20 bg-white dark:bg-zinc-950">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-zinc-100 mb-4">
               Everything you need for database operations
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-zinc-400">
               From development to production, DataRoll has you covered
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Zap className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Lightning Fast Migrations</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Lightning Fast Migrations</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
                 Execute database migrations instantly with our optimized engine.
                 Support for PostgreSQL, MySQL, and SQLite.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-green-300 dark:hover:border-green-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Activity className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Real-time Monitoring</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Real-time Monitoring</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
                 Monitor database health, performance, and errors in real-time.
                 Get alerts before issues become problems.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Shield className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Instant Rollbacks</h3>
-              <p className="text-gray-600">
-                Roll back migrations instantly when issues occur.
-                Never lose data or break your application.
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Enterprise Security</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
+                RBAC, audit logs, and encrypted credentials. SOC 2 compliant
+                with enterprise-grade security features.
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-orange-300 dark:hover:border-orange-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <GitBranch className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">CI/CD Integration</h3>
-              <p className="text-gray-600">
-                Seamlessly integrate with your CI/CD pipelines.
-                Automate deployments and get instant feedback.
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Instant Rollbacks</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
+                Made a mistake? Roll back to any previous state instantly.
+                Zero-downtime migrations included.
               </p>
             </div>
 
             {/* Feature 5 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Users className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Developer Friendly</h3>
-              <p className="text-gray-600">
-                Simple CLI and SDK for easy integration.
-                Works with your existing tools and workflows.
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Team Collaboration</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
+                Work together with role-based access control. Review and
+                approve migrations before they go live.
               </p>
             </div>
 
             {/* Feature 6 */}
-            <div className="text-center p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+            <div className="group text-center p-6 rounded-xl border border-gray-200 dark:border-zinc-800 hover:shadow-lg hover:border-yellow-300 dark:hover:border-yellow-700 transition-all bg-white dark:bg-zinc-900">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Workflow className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Enterprise Security</h3>
-              <p className="text-gray-600">
-                Bank-level security with encrypted connections,
-                audit logs, and compliance features.
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Automated Workflows</h3>
+              <p className="text-gray-600 dark:text-zinc-400">
+                Create automated workflows for CI/CD integration. Run
+                migrations on deployment automatically.
               </p>
             </div>
           </div>
@@ -195,7 +199,7 @@ function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="px-6 py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="px-6 py-20 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-white mb-4">
             Ready to simplify your database operations?
@@ -241,15 +245,13 @@ function LandingPage() {
                 <li><Link href="#features" className="hover:text-white transition-colors">Features</Link></li>
                 <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                 <li><Link href="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="/api" className="hover:text-white transition-colors">API</Link></li>
+                <li><Link href="/api-docs" className="hover:text-white transition-colors">API</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-400">
                 <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
-                <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               </ul>
             </div>
@@ -258,7 +260,6 @@ function LandingPage() {
               <ul className="space-y-2 text-gray-400">
                 <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
                 <li><Link href="/report-issue" className="hover:text-white transition-colors">Report Issue</Link></li>
-                <li><Link href="/status" className="hover:text-white transition-colors">Status</Link></li>
                 <li><Link href="/security" className="hover:text-white transition-colors">Security</Link></li>
               </ul>
             </div>
@@ -273,28 +274,131 @@ function LandingPage() {
 }
 
 function Dashboard() {
-  const session = useSession()
+  const { data: session } = useSession()
+  const router = useRouter()
+
+  // Keyboard shortcuts
+  useShortcut('c', () => router.push('/dashboard/connections'), {
+    description: 'Go to Connections',
+    category: 'Navigation'
+  });
+
+  useShortcut('m', () => router.push('/dashboard/migrations'), {
+    description: 'Go to Migrations',
+    category: 'Navigation'
+  });
+
+  useShortcut('w', () => router.push('/dashboard/workflows'), {
+    description: 'Go to Workflows',
+    category: 'Navigation'
+  });
+
+  useShortcut('t', () => router.push('/dashboard/teams'), {
+    description: 'Go to Teams',
+    category: 'Navigation'
+  });
+
+  const quickLinks = [
+    {
+      title: "Connections",
+      description: "Manage database connections",
+      icon: Database,
+      href: "/dashboard/connections",
+      color: "from-blue-500 to-cyan-500",
+      shortcut: "C"
+    },
+    {
+      title: "Migrations",
+      description: "Create and run migrations",
+      icon: GitBranch,
+      href: "/dashboard/migrations",
+      color: "from-purple-500 to-pink-500",
+      shortcut: "M"
+    },
+    {
+      title: "Workflows",
+      description: "Automate your processes",
+      icon: Workflow,
+      href: "/dashboard/workflows",
+      color: "from-green-500 to-emerald-500",
+      shortcut: "W"
+    },
+    {
+      title: "Monitoring",
+      description: "Track database health",
+      icon: Activity,
+      href: "/dashboard/monitoring",
+      color: "from-orange-500 to-red-500",
+      shortcut: "N"
+    },
+    {
+      title: "Teams",
+      description: "Manage team access",
+      icon: Users,
+      href: "/dashboard/teams",
+      color: "from-indigo-500 to-purple-500",
+      shortcut: "T"
+    },
+    {
+      title: "Audit Logs",
+      description: "View activity history",
+      icon: FileText,
+      href: "/dashboard/audit",
+      color: "from-yellow-500 to-orange-500",
+      shortcut: "A"
+    }
+  ]
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <nav className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl px-6 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">DR</span>
-            </div>
-            <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">DataRoll</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/dashboard" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Dashboard
+          <div className="flex items-center space-x-8">
+            <Link href="/dashboard" className="flex items-center space-x-2 group">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span className="text-white font-bold text-sm">DR</span>
+              </div>
+              <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">DataRoll</span>
             </Link>
-            <Link href="/profile" className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-              Profile
+            <div className="hidden md:flex items-center space-x-1">
+              <Link 
+                href="/dashboard" 
+                className="px-3 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link 
+                href="/dashboard/connections" 
+                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                Connections
+              </Link>
+              <Link 
+                href="/dashboard/migrations" 
+                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                Migrations
+              </Link>
+              <Link 
+                href="/dashboard/workflows" 
+                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                Workflows
+              </Link>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <KeyboardShortcutsHelp />
+            <ThemeToggle />
+            <Link 
+              href="/profile" 
+              className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+            >
+              {session?.user?.name || session?.user?.email || "Profile"}
             </Link>
             <button
               onClick={() => signOut()}
-              className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
             >
               Sign Out
             </button>
@@ -303,35 +407,113 @@ function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-12">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-4">
-            Welcome to DataRoll
+        {/* Welcome Header */}
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
+            Welcome back, {session?.user?.name?.split(' ')[0] || 'there'}! 👋
           </h1>
-          <p className="text-xl text-zinc-600 dark:text-zinc-400 mb-8">
-            Your database management dashboard
+          <p className="text-lg text-zinc-600 dark:text-zinc-400">
+            Here's what you can do with DataRoll
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Link
-              href="/dashboard/connections"
-              className="block p-6 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:shadow-lg transition-all"
-            >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Database Connections</h3>
-              <p className="text-zinc-600 dark:text-zinc-400">Manage your database connections</p>
-            </Link>
-            <Link
-              href="/dashboard/migrations"
-              className="block p-6 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:shadow-lg transition-all"
-            >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Migrations</h3>
-              <p className="text-zinc-600 dark:text-zinc-400">Create and manage migrations</p>
-            </Link>
-            <Link
-              href="/dashboard/monitoring"
-              className="block p-6 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:shadow-lg transition-all"
-            >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Monitoring</h3>
-              <p className="text-zinc-600 dark:text-zinc-400">Monitor database health</p>
-            </Link>
+        </div>
+
+        {/* Quick Links Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {quickLinks.map((link) => {
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="group relative overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`p-3 rounded-lg bg-gradient-to-br ${link.color} bg-opacity-10`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className="text-xs font-mono text-zinc-400 dark:text-zinc-600 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
+                    {link.shortcut}
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {link.title}
+                </h3>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                  {link.description}
+                </p>
+                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+                  Open <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${link.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Additional Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-900 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Settings className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Quick Actions</h3>
+            </div>
+            <div className="space-y-3">
+              <Link 
+                href="/dashboard/connections?new=true" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Add Connection</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link 
+                href="/dashboard/migrations?new=true" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Create Migration</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link 
+                href="/dashboard/workflows?new=true" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">New Workflow</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-900 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-600 rounded-lg">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Resources</h3>
+            </div>
+            <div className="space-y-3">
+              <a 
+                href="/test-error-tracking" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Test Error Tracking</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+              </a>
+              <Link 
+                href="/report-issue" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Report an Issue</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+              <Link 
+                href="/profile" 
+                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
+              >
+                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Account Settings</span>
+                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
+              </Link>
+            </div>
           </div>
         </div>
       </main>

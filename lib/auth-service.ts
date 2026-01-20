@@ -276,77 +276,8 @@ export class AuthService {
     }
   }
 
-  // Organization methods
-  static async createOrganization(data: { name: string; slug: string; logo?: string; metadata?: Record<string, unknown> }) {
-    try {
-      const result = await authClient.organization.create(data)
-
-      if (result.error) {
-        return {
-          success: false,
-          error: result.error.message || "Failed to create organization",
-        }
-      }
-
-      return {
-        success: true,
-        data: result.data,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
-      }
-    }
-  }
-
-  static async listOrganizations() {
-    try {
-      const result = await authClient.organization.list()
-
-      if (result.error) {
-        return {
-          success: false,
-          error: result.error.message || "Failed to list organizations",
-        }
-      }
-
-      return {
-        success: true,
-        data: result.data,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
-      }
-    }
-  }
-
-  static async setActiveOrganization(organizationId: string | null) {
-    try {
-      const result = await authClient.organization.setActive({
-        organizationId,
-      })
-
-      if (result.error) {
-        return {
-          success: false,
-          error: result.error.message || "Failed to set active organization",
-        }
-      }
-
-      return {
-        success: true,
-        data: result.data,
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "An unexpected error occurred",
-      }
-    }
-  }
+  // Organization methods are handled through the Team system
+  // Better Auth organization plugin is disabled to avoid conflicts with custom team management
 
   // static async addMemberToOrganization(data: { userId?: string | null; role: string | string[]; organizationId?: string; teamId?: string }) {
   //   try {

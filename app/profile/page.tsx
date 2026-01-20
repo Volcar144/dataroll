@@ -6,25 +6,12 @@ import { useRouter } from "next/navigation"
 import { AuthService } from "@/lib/auth-service"
 import posthog from "posthog-js"
 
-interface Organization {
-  id: string
-  name: string
-  slug: string
-  createdAt: Date
-  logo?: string | null
-  metadata?: unknown
-}
-
 export default function Profile() {
   const { data: session, isPending } = useSession()
   const router = useRouter()
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [password, setPassword] = useState("")
   const [showPasswordInput, setShowPasswordInput] = useState(false)
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [activeOrganization, setActiveOrganization] = useState<string | null>(null)
-  const [newOrgName, setNewOrgName] = useState("")
-  const [newOrgSlug, setNewOrgSlug] = useState("")
   const [passkeyName, setPasskeyName] = useState("")
   const [showPasskeyInput, setShowPasskeyInput] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -36,12 +23,6 @@ export default function Profile() {
       router.push("/auth/signin")
     }
   }, [session, isPending, router])
-
-  useEffect(() => {
-    if (session) {
-      loadOrganizations()
-    }
-  }, [session])
 
   const handleEnable2FA = async () => {
     if (!password) {
@@ -156,76 +137,6 @@ export default function Profile() {
       // For now, we'll just show a placeholder
     } catch (err) {
       console.error("Failed to load passkeys", err)
-    }
-  }
-
-  const loadOrganizations = async () => {
-    try {
-      const result = await AuthService.listOrganizations()
-      if (result.success) {
-        setOrganizations(result.data || [])
-      }
-    } catch (_err) {
-      console.error("Failed to load organizations", _err)
-    }
-  }
-
-  const handleCreateOrganization = async () => {
-    if (!newOrgName || !newOrgSlug) return
-
-    setLoading(true)
-    setError("")
-    setSuccess("")
-
-    try {
-      const result = await AuthService.createOrganization({
-        name: newOrgName,
-        slug: newOrgSlug,
-      })
-
-      if (!result.success) {
-        setError(result.error || "Failed to create organization")
-        return
-      }
-
-      setSuccess("Organization created successfully!")
-      setNewOrgName("")
-      setNewOrgSlug("")
-      loadOrganizations()
-
-      // Track organization created event
-      posthog.capture('organization_created', {
-        user_email: session?.user?.email,
-        organization_name: newOrgName,
-        organization_slug: newOrgSlug,
-      })
-    } catch (_err) {
-      setError("Failed to create organization")
-      posthog.captureException(_err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSetActiveOrganization = async (organizationId: string | null) => {
-    setLoading(true)
-    setError("")
-    setSuccess("")
-
-    try {
-      const result = await AuthService.setActiveOrganization(organizationId)
-
-      if (!result.success) {
-        setError(result.error || "Failed to set active organization")
-        return
-      }
-
-      setActiveOrganization(organizationId)
-      setSuccess("Active organization updated!")
-    } catch (_err) {
-      setError("Failed to set active organization")
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -363,88 +274,6 @@ export default function Profile() {
                 Cancel
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Organizations */}
-        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-            Organizations
-          </h2>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-            Manage your organizations for team collaboration and multi-tenant access.
-          </p>
-
-          <div className="space-y-4">
-            {organizations.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Your Organizations
-                </h3>
-                <div className="space-y-2">
-                  {organizations.map((org) => (
-                    <div key={org.id} className="flex items-center justify-between p-3 border border-zinc-200 dark:border-zinc-700 rounded-md">
-                      <div>
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100">{org.name}</p>
-                        <p className="text-sm text-zinc-500 dark:text-zinc-400">Slug: {org.slug}</p>
-                      </div>
-                      <button
-                        onClick={() => handleSetActiveOrganization(org.id)}
-                        disabled={loading}
-                        className={`px-3 py-1 text-sm rounded-md ${
-                          activeOrganization === org.id
-                            ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                            : "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
-                        } disabled:opacity-50`}
-                      >
-                        {activeOrganization === org.id ? "Active" : "Set Active"}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Create New Organization
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="orgName" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Organization Name
-                  </label>
-                  <input
-                    id="orgName"
-                    type="text"
-                    value={newOrgName}
-                    onChange={(e) => setNewOrgName(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                    placeholder="Enter organization name"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="orgSlug" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Organization Slug
-                  </label>
-                  <input
-                    id="orgSlug"
-                    type="text"
-                    value={newOrgSlug}
-                    onChange={(e) => setNewOrgSlug(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 shadow-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-                    placeholder="enter-slug-here"
-                  />
-                </div>
-                <button
-                  onClick={handleCreateOrganization}
-                  disabled={loading || !newOrgName || !newOrgSlug}
-                  className="w-full px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                >
-                  {loading ? "Creating..." : "Create Organization"}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 

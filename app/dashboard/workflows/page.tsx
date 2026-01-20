@@ -18,9 +18,7 @@ export default async function WorkflowsPage() {
   // Get user's workflows
   const workflows = await prisma.workflow.findMany({
     where: {
-      createdBy: {
-        id: session.user.id,
-      },
+      createdBy: session.user.id,
     },
     include: {
       team: {
@@ -70,7 +68,7 @@ export default async function WorkflowsPage() {
                   <div className="flex gap-4 mt-4 text-sm text-gray-500">
                     <span>Team: {workflow.team.name}</span>
                     <span>{workflow._count.executions} execution{workflow._count.executions !== 1 ? 's' : ''}</span>
-                    <span>Status: {workflow.enabled ? '🟢 Active' : '🔴 Inactive'}</span>
+                    <span>Status: {workflow.isPublished ? '🟢 Published' : '🔴 Draft'}</span>
                   </div>
                 </div>
                 <Link href={`/dashboard/workflows/${workflow.id}`}>
