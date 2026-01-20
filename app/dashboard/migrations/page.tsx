@@ -51,6 +51,7 @@ export default function MigrationsPage() {
   const [executionResult, setExecutionResult] = useState<ExecutionResult | null>(null)
   const [showExecutionModal, setShowExecutionModal] = useState(false)
   const [selectedMigration, setSelectedMigration] = useState<Migration | null>(null)
+  const [teamId, setTeamId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -60,13 +61,26 @@ export default function MigrationsPage() {
 
   useEffect(() => {
     if (session) {
-      fetchMigrations()
+      fetchTeamAndMigrations()
     }
   }, [session])
 
-  const fetchMigrations = async () => {
+  const fetchTeamAndMigrations = async () => {
     try {
-      const response = await fetch('/api/migrations')
+      // First fetch teams to get teamId
+      const teamsRes = await fetch('/api/teams')
+      const teamsData = await teamsRes.json()
+      const firstTeamId = teamsData.data?.[0]?.id
+      
+      if (!firstTeamId) {
+        setLoading(false)
+        return
+      }
+      
+      setTeamId(firstTeamId)
+      
+      // Now fetch migrations with teamId
+      const response = await fetch(`/api/migrations?teamId=${firstTeamId}`)
       const data = await response.json()
       if (data.success) {
         setMigrations(data.data || [])
@@ -99,7 +113,7 @@ export default function MigrationsPage() {
       if (result.success) {
         setExecutionResult(result.data)
         if (!dryRun) {
-          fetchMigrations() // Refresh the list
+          fetchTeamAndMigrations() // Refresh the list
         }
 
         // Track migration events
@@ -167,7 +181,7 @@ export default function MigrationsPage() {
 
       if (result.success) {
         setExecutionResult(result.data)
-        fetchMigrations() // Refresh the list
+        fetchTeamAndMigrations() // Refresh the list
 
         // Track rollback event
         posthog.capture('migration_rolled_back', {

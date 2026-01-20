@@ -28,6 +28,7 @@ export default function AuditPage() {
   const router = useRouter()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [defaultTeamId, setDefaultTeamId] = useState<string>('')
   const [filters, setFilters] = useState({
     action: '',
     userId: '',
@@ -42,17 +43,41 @@ export default function AuditPage() {
   }, [session, isPending, router])
 
   useEffect(() => {
-    if (session) {
+    if (session && !defaultTeamId) {
+      fetchTeamFirst()
+    }
+  }, [session, defaultTeamId])
+
+  useEffect(() => {
+    if (session && defaultTeamId) {
       fetchAuditLogs()
     }
-  }, [session, filters])
+  }, [session, defaultTeamId, filters])
+
+  const fetchTeamFirst = async () => {
+    try {
+      const teamsRes = await fetch('/api/teams')
+      const teamsData = await teamsRes.json()
+      const firstTeamId = teamsData.data?.[0]?.id
+      if (firstTeamId) {
+        setDefaultTeamId(firstTeamId)
+      } else {
+        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Failed to fetch teams:', error)
+      setLoading(false)
+    }
+  }
 
   const fetchAuditLogs = async () => {
     try {
       const queryParams = new URLSearchParams()
       if (filters.action) queryParams.append('action', filters.action)
       if (filters.userId) queryParams.append('userId', filters.userId)
-      if (filters.teamId) queryParams.append('teamId', filters.teamId)
+      // Use filter teamId if set, otherwise use default team
+      const teamIdToUse = filters.teamId || defaultTeamId
+      if (teamIdToUse) queryParams.append('teamId', teamIdToUse)
       queryParams.append('limit', filters.limit.toString())
 
       const response = await fetch(`/api/audit-logs?${queryParams}`)

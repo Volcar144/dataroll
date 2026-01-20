@@ -22,6 +22,7 @@ export default function ConnectionsPage() {
   const [connections, setConnections] = useState<DatabaseConnection[]>([])
   const [loading, setLoading] = useState(true)
   const [testingConnection, setTestingConnection] = useState<string | null>(null)
+  const [teamId, setTeamId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -31,13 +32,26 @@ export default function ConnectionsPage() {
 
   useEffect(() => {
     if (session) {
-      fetchConnections()
+      fetchTeamAndConnections()
     }
   }, [session])
 
-  const fetchConnections = async () => {
+  const fetchTeamAndConnections = async () => {
     try {
-      const response = await fetch('/api/connections')
+      // First fetch teams to get teamId
+      const teamsRes = await fetch('/api/teams')
+      const teamsData = await teamsRes.json()
+      const firstTeamId = teamsData.data?.[0]?.id
+      
+      if (!firstTeamId) {
+        setLoading(false)
+        return
+      }
+      
+      setTeamId(firstTeamId)
+      
+      // Now fetch connections with teamId
+      const response = await fetch(`/api/connections?teamId=${firstTeamId}`)
       const data = await response.json()
       if (data.success) {
         setConnections(data.data || [])

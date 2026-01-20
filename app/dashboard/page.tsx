@@ -82,16 +82,31 @@ export default function Dashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch dashboard statistics
-      const [teamsRes, connectionsRes, migrationsRes, auditRes] = await Promise.all([
-        fetch('/api/teams'),
-        fetch('/api/connections'),
-        fetch('/api/migrations'),
-        fetch('/api/audit-logs?limit=5')
+      // First, fetch teams to get the default team ID
+      const teamsRes = await fetch('/api/teams')
+      const teams = await teamsRes.json()
+      
+      const teamId = teams.data?.[0]?.id
+      
+      if (!teamId) {
+        setStats({
+          totalTeams: 0,
+          totalConnections: 0,
+          totalMigrations: 0,
+          recentActivity: []
+        })
+        setLoading(false)
+        return
+      }
+      
+      // Fetch dashboard statistics with teamId
+      const [connectionsRes, migrationsRes, auditRes] = await Promise.all([
+        fetch(`/api/connections?teamId=${teamId}`),
+        fetch(`/api/migrations?teamId=${teamId}`),
+        fetch(`/api/audit-logs?teamId=${teamId}&limit=5`)
       ])
 
-      const [teams, connections, migrations, auditLogs] = await Promise.all([
-        teamsRes.json(),
+      const [connections, migrations, auditLogs] = await Promise.all([
         connectionsRes.json(),
         migrationsRes.json(),
         auditRes.json()
