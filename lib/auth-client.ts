@@ -2,6 +2,8 @@ import { createAuthClient } from "better-auth/react"
 import { passkeyClient } from "@better-auth/passkey/client"
 import { twoFactorClient, deviceAuthorizationClient } from "better-auth/client/plugins"
 
+const clientBaseUrl = (process.env.NEXT_PUBLIC_BETTER_AUTH_URL || process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app").replace(/\/+$/, "")
+
 // Create BetterAuth client instance with all plugins
 export const authClient = createAuthClient({
     account: {
@@ -9,7 +11,7 @@ export const authClient = createAuthClient({
             trustedProviders: ["google", "github", "discord"]
         }
     },
-    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || process.env.BETTER_AUTH_URL || "https://fun-five-psi.vercel.app",
+    baseURL: clientBaseUrl,
     plugins: [
         // Passkey/WebAuthn support
         passkeyClient(),

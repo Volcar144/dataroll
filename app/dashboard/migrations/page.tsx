@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import posthog from "posthog-js"
+import { ChevronDown, Download, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
 
 interface Migration {
   id: string
@@ -52,6 +53,7 @@ export default function MigrationsPage() {
   const [showExecutionModal, setShowExecutionModal] = useState(false)
   const [selectedMigration, setSelectedMigration] = useState<Migration | null>(null)
   const [teamId, setTeamId] = useState<string | null>(null)
+  const [expandedMigration, setExpandedMigration] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -223,15 +225,32 @@ export default function MigrationsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'EXECUTED':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
       case 'FAILED':
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
       case 'EXECUTING':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+        return 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-200'
       case 'ROLLED_BACK':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+      case 'PENDING':
+        return 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200'
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+        return 'bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-200'
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'EXECUTED':
+        return <CheckCircle className="h-5 w-5 text-emerald-500" />
+      case 'FAILED':
+        return <XCircle className="h-5 w-5 text-red-500" />
+      case 'PENDING':
+        return <Clock className="h-5 w-5 text-slate-400" />
+      case 'ROLLED_BACK':
+        return <AlertCircle className="h-5 w-5 text-amber-500" />
+      default:
+        return <Clock className="h-5 w-5 text-slate-400" />
     }
   }
 
@@ -241,6 +260,31 @@ export default function MigrationsPage() {
 
   const canRollback = (migration: Migration) => {
     return migration.status === 'EXECUTED'
+  }
+
+  const getMigrationStats = () => {
+    const stats = {
+      total: migrations.length,
+      executed: migrations.filter(m => m.status === 'EXECUTED').length,
+      pending: migrations.filter(m => m.status === 'PENDING').length,
+      failed: migrations.filter(m => m.status === 'FAILED').length,
+      rolledBack: migrations.filter(m => m.status === 'ROLLED_BACK').length,
+    }
+    return stats
+  }
+
+  const exportMigrationHistory = () => {
+    const csv = ['Name,Version,Status,Connection,Executed At,Rolled Back At']
+    migrations.forEach(m => {
+      csv.push(`"${m.name}","${m.version}","${m.status}","${m.databaseConnection.name}","${m.executedAt || 'N/A'}","${m.rolledBackAt || 'N/A'}"`)
+    })
+    const element = document.createElement('a')
+    element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv.join('\n')))
+    element.setAttribute('download', `migrations-${new Date().toISOString().split('T')[0]}.csv`)
+    element.style.display = 'none'
+    document.body.appendChild(element)
+    element.click()
+    document.body.removeChild(element)
   }
 
   if (isPending || loading) {
@@ -255,30 +299,34 @@ export default function MigrationsPage() {
     return null
   }
 
+  const stats = getMigrationStats()
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      {/* Header */}
-      <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                Migrations
-              </h1>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Manage and execute database migrations
-              </p>
+    <div className="min-h-screen bg-gradient-to-b from-zinc-50 via-white to-zinc-100 dark:from-black dark:via-zinc-950 dark:to-zinc-900">
+      <header className="border-b border-zinc-200/60 dark:border-zinc-800/60 bg-white/70 dark:bg-zinc-950/60 backdrop-blur sticky top-0 z-40">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="inline-flex items-center rounded-full bg-zinc-900 text-white px-3 py-1 text-xs font-semibold dark:bg-white dark:text-zinc-900">
+                Schema management
+              </div>
+              <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Migrations</h1>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Plan, execute, and rollback schema changes safely</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportMigrationHistory}
+                className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
               <Link
                 href="/dashboard"
-                className="px-4 py-2 border border-zinc-300 bg-white text-zinc-900 rounded-md hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
               >
-                Back to Dashboard
+                Back
               </Link>
-              <button className="px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-                Create Migration
-              </button>
             </div>
           </div>
         </div>
@@ -286,42 +334,42 @@ export default function MigrationsPage() {
 
       {/* Execution Result Modal */}
       {executionResult && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="relative mx-4 w-full max-w-md rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-4 flex items-center">
               {executionResult.success ? (
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                  <CheckCircle className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
               ) : (
-                <div className="w-8 h-8 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
               )}
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                {executionResult.dryRun ? 'Dry Run Result' : executionResult.success ? 'Success' : 'Error'}
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+                {executionResult.dryRun ? 'Simulation complete' : executionResult.success ? 'Execution successful' : 'Execution failed'}
               </h3>
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                Duration: {executionResult.duration}ms
-              </p>
+            <div className="mb-6 space-y-3">
+              <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-800/50">
+                <p className="text-xs uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Execution time</p>
+                <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{executionResult.duration}ms</p>
+              </div>
               {executionResult.error && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {executionResult.error}
-                </p>
+                <div className="rounded-lg border border-red-200/50 bg-red-50/50 p-3 dark:border-red-900/50 dark:bg-red-900/20">
+                  <p className="text-sm text-red-700 dark:text-red-200">{executionResult.error}</p>
+                </div>
               )}
               {executionResult.changes && executionResult.changes.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">Changes:</p>
-                  <ul className="text-sm text-zinc-600 dark:text-zinc-400 space-y-1">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Changes</p>
+                  <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
                     {executionResult.changes.map((change, index) => (
-                      <li key={index}>• {change}</li>
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="mt-1 inline-block h-1 w-1 rounded-full bg-zinc-400" />
+                        {change}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -330,7 +378,7 @@ export default function MigrationsPage() {
 
             <button
               onClick={() => setExecutionResult(null)}
-              className="w-full px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
             >
               Close
             </button>
@@ -338,107 +386,143 @@ export default function MigrationsPage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-8">
+        {/* Stats Cards */}
+        <section className="grid gap-4 sm:grid-cols-5">
+          <StatCard label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-200" />
+          <StatCard label="Executed" value={stats.executed} color="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200" />
+          <StatCard label="Pending" value={stats.pending} color="bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-200" />
+          <StatCard label="Failed" value={stats.failed} color="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200" />
+          <StatCard label="Rolled back" value={stats.rolledBack} color="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200" />
+        </section>
+
         {migrations.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+          <div className="rounded-2xl border border-zinc-200/70 bg-white p-12 text-center dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <Clock className="h-8 w-8 text-zinc-400" />
             </div>
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-2">
-              No migrations found
-            </h3>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-              Create your first migration to get started.
-            </p>
-            <button className="px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200">
-              Create Migration
+            <h3 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">No migrations yet</h3>
+            <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">Create your first migration to manage schema changes.</p>
+            <button className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100">
+              New migration
             </button>
           </div>
         ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-              <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
-                Migration History
-              </h2>
-            </div>
-            <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
-              {migrations.map((migration) => (
-                <div key={migration.id} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center">
-                        <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mr-3">
-                          {migration.name}
-                        </h3>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(migration.status)}`}>
-                          {migration.status}
-                        </span>
+          <div className="space-y-4">
+            {migrations.map((migration) => (
+              <div
+                key={migration.id}
+                className="rounded-2xl border border-zinc-200/70 bg-white p-4 shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(migration.status)}
+                        <div>
+                          <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{migration.name}</h3>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400">v{migration.version} • {migration.type}</p>
+                        </div>
                       </div>
-                      <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                        <span>Version: {migration.version}</span>
-                        <span className="mx-2">•</span>
-                        <span>Type: {migration.type}</span>
-                        <span className="mx-2">•</span>
-                        <span>Connection: {migration.databaseConnection.name}</span>
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-600 dark:text-zinc-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 dark:bg-zinc-800">
+                          {migration.databaseConnection.name}
+                        </span>
                         {migration.executedAt && (
-                          <>
-                            <span className="mx-2">•</span>
-                            <span>Executed: {new Date(migration.executedAt).toLocaleString()}</span>
-                          </>
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                            ✓ {new Date(migration.executedAt).toLocaleDateString()}
+                          </span>
                         )}
                         {migration.rolledBackAt && (
-                          <>
-                            <span className="mx-2">•</span>
-                            <span>Rolled back: {new Date(migration.rolledBackAt).toLocaleString()}</span>
-                          </>
+                          <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            ↻ {new Date(migration.rolledBackAt).toLocaleDateString()}
+                          </span>
                         )}
                       </div>
-                      <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
-                        Created by {migration.createdBy.name || migration.createdBy.email} on {new Date(migration.createdAt).toLocaleString()}
-                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {canExecute(migration) && (
-                        <>
-                          <button
-                            onClick={() => executeMigration(migration, true)}
-                            disabled={executingMigration === migration.id}
-                            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                          >
-                            {executingMigration === migration.id ? 'Running...' : 'Dry Run'}
-                          </button>
-                          <button
-                            onClick={() => executeMigration(migration, false)}
-                            disabled={executingMigration === migration.id}
-                            className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                          >
-                            {executingMigration === migration.id ? 'Executing...' : 'Execute'}
-                          </button>
-                        </>
-                      )}
-                      {canRollback(migration) && (
-                        <button
-                          onClick={() => rollbackMigration(migration)}
-                          disabled={rollingBackMigration === migration.id}
-                          className="px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
-                        >
-                          {rollingBackMigration === migration.id ? 'Rolling back...' : 'Rollback'}
-                        </button>
-                      )}
-                      <button className="px-3 py-1 text-sm bg-zinc-600 text-white rounded hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-500">
-                        View Details
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(migration.status)}`}>
+                        {migration.status}
+                      </span>
+                      <button
+                        onClick={() => setExpandedMigration(expandedMigration === migration.id ? null : migration.id)}
+                        className="rounded-full p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      >
+                        <ChevronDown className={`h-4 w-4 transition-transform ${expandedMigration === migration.id ? 'rotate-180' : ''}`} />
                       </button>
                     </div>
                   </div>
+
+                  {expandedMigration === migration.id && (
+                    <div className="space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                      <div className="grid gap-4 text-sm">
+                        <div>
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Created by</p>
+                          <p className="text-zinc-900 dark:text-zinc-50">{migration.createdBy.name || migration.createdBy.email}</p>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400">{new Date(migration.createdAt).toLocaleString()}</p>
+                        </div>
+
+                        {migration.executions && migration.executions.length > 0 && (
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Execution history</p>
+                            <div className="space-y-1">
+                              {migration.executions.slice(0, 3).map(exec => (
+                                <div key={exec.id} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/50">
+                                  <span className="text-xs text-zinc-600 dark:text-zinc-400">{new Date(exec.executedAt).toLocaleString()}</span>
+                                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{exec.duration}ms</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                        {canExecute(migration) && (
+                          <>
+                            <button
+                              onClick={() => executeMigration(migration, true)}
+                              disabled={executingMigration === migration.id}
+                              className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-700"
+                            >
+                              {executingMigration === migration.id ? 'Simulating...' : 'Simulate'}
+                            </button>
+                            <button
+                              onClick={() => executeMigration(migration, false)}
+                              disabled={executingMigration === migration.id}
+                              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-700"
+                            >
+                              {executingMigration === migration.id ? 'Executing...' : 'Execute'}
+                            </button>
+                          </>
+                        )}
+                        {canRollback(migration) && (
+                          <button
+                            onClick={() => rollbackMigration(migration)}
+                            disabled={rollingBackMigration === migration.id}
+                            className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 dark:bg-amber-700"
+                          >
+                            {rollingBackMigration === migration.id ? 'Rolling back...' : 'Rollback'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </main>
+    </div>
+  )
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className={`rounded-2xl p-4 text-center ${color}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-75">{label}</p>
+      <p className="mt-2 text-2xl font-bold">{value}</p>
     </div>
   )
 }
