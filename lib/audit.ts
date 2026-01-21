@@ -33,7 +33,14 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
     });
   } catch (error) {
     // Log error but don't throw - audit logging shouldn't break the main operation
-    console.error("Failed to create audit log:", error);
+    const logger = (await import('./logger')).default;
+    logger.error({ msg: "Failed to create audit log", error });
+    const { captureServerException } = await import('./posthog-server');
+    await captureServerException(error instanceof Error ? error : new Error('Unknown error in audit log'), input.userId, { action: input.action, resource: input.resource, teamId: input.teamId });
+    if (typeof console !== 'undefined') {
+      // Fallback for environments where logger may not print
+      console.error("Failed to create audit log:", error);
+    }
   }
 }
 

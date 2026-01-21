@@ -55,7 +55,12 @@ export class DatabaseConnectionService {
           operation: 'connection_test',
           errorType: 'connection_failed',
           message: errorMessage,
-        }).catch(console.error) // Don't throw if error recording fails
+        }).catch(async (err) => {
+          const logger = (await import('./logger')).default;
+          logger.error({ msg: 'Failed to record database error', err });
+          const { captureServerException } = await import('./posthog-server');
+          await captureServerException(err instanceof Error ? err : new Error('Unknown error in recordDatabaseError'), undefined, { operation: 'connection_test', connectionId: data.connectionId });
+        });
       }
 
       return {
@@ -94,7 +99,12 @@ export class DatabaseConnectionService {
           errorType: 'query_error',
           message: errorMessage,
           details: query,
-        }).catch(console.error) // Don't throw if error recording fails
+        }).catch(async (err) => {
+          const logger = (await import('./logger')).default;
+          logger.error({ msg: 'Failed to record database error', err });
+          const { captureServerException } = await import('./posthog-server');
+          await captureServerException(err instanceof Error ? err : new Error('Unknown error in recordDatabaseError'), undefined, { operation: 'query_execution', connectionId });
+        });
       }
 
       return {
@@ -135,6 +145,10 @@ export class DatabaseConnectionService {
       if (client) {
         await client.end()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'PostgreSQL connection failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in testPostgresConnection'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'PostgreSQL connection failed',
@@ -173,6 +187,10 @@ export class DatabaseConnectionService {
       if (connection) {
         await connection.end()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'MySQL connection failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in testMySQLConnection'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'MySQL connection failed',
@@ -203,6 +221,10 @@ export class DatabaseConnectionService {
       if (db) {
         db.close()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'SQLite connection failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in testSQLiteConnection'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'SQLite connection failed',
@@ -265,6 +287,10 @@ export class DatabaseConnectionService {
       if (client) {
         await client.end()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'PostgreSQL query execution failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in executePostgresQuery'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'PostgreSQL query execution failed',
@@ -324,6 +350,10 @@ export class DatabaseConnectionService {
       if (mysqlConnection) {
         await mysqlConnection.end()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'MySQL query execution failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in executeMySQLQuery'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'MySQL query execution failed',
@@ -369,6 +399,10 @@ export class DatabaseConnectionService {
       if (db) {
         db.close()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'SQLite query execution failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in executeSQLiteQuery'));
       return {
         success: false,
         error: error instanceof Error ? error.message : 'SQLite query execution failed',
@@ -440,12 +474,11 @@ export class DatabaseConnectionService {
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
-        AND table_name LIKE '_prisma_migrations'
-        OR table_name LIKE '%_prisma_%'
+        AND (table_name = '_prisma_migrations' OR table_name LIKE '%_prisma_%')
       `)
 
       if (prismaTables.rows.length > 0) {
-        evidence.push('Found Prisma migration tables')
+        evidence.push(`Found Prisma migration table: ${prismaTables.rows.map(r => r.table_name).join(', ')}`)
       }
 
       // Check for Drizzle-specific patterns
@@ -453,12 +486,11 @@ export class DatabaseConnectionService {
         SELECT table_name
         FROM information_schema.tables
         WHERE table_schema = 'public'
-        AND table_name LIKE '__drizzle_migrations'
-        OR table_name LIKE '%_drizzle_%'
+        AND (table_name = '__drizzle_migrations' OR table_name LIKE '%_drizzle_%')
       `)
 
       if (drizzleTables.rows.length > 0) {
-        evidence.push('Found Drizzle migration tables')
+        evidence.push(`Found Drizzle migration table: ${drizzleTables.rows.map(r => r.table_name).join(', ')}`)
       }
 
       // Check table naming conventions
@@ -510,6 +542,10 @@ export class DatabaseConnectionService {
       if (client) {
         await client.end()
       }
+      const logger = (await import('./logger')).default;
+      logger.error({ msg: 'ORM detection failed', error });
+      const { captureServerException } = await import('./posthog-server');
+      await captureServerException(error instanceof Error ? error : new Error('Unknown error in detectORMFromPostgres'));
       return {
         detectedORM: 'UNKNOWN',
         confidence: 0,

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "@/lib/auth-service"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Activity, AlertCircle, AlertTriangle, CheckCircle2, Circle, Database, Gauge, Plug2, RefreshCw, ShieldCheck } from "lucide-react"
+import { Activity, AlertCircle, AlertTriangle, CheckCircle2, Circle, Copy, Database, Gauge, Plug2, RefreshCw, ShieldCheck } from "lucide-react"
 
 type Connection = {
   id: string
@@ -52,6 +52,9 @@ export default function ConnectionsPage() {
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({})
   const [testing, setTesting] = useState<Record<string, boolean>>({})
   const [checking, setChecking] = useState<Record<string, boolean>>({})
+  const [proxyGenerating, setProxyGenerating] = useState<Record<string, boolean>>({})
+  const [proxyLinks, setProxyLinks] = useState<Record<string, { proxyUrl: string; createdAt: string }>>({})
+  const [proxyErrors, setProxyErrors] = useState<Record<string, string | null>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -198,6 +201,34 @@ export default function ConnectionsPage() {
       console.error("Health check failed", err)
     } finally {
       setChecking((prev) => ({ ...prev, [connectionId]: false }))
+    }
+  }
+
+  const handleCreateProxyUrl = async (connectionId: string) => {
+    setProxyErrors((prev) => ({ ...prev, [connectionId]: null }))
+    setProxyGenerating((prev) => ({ ...prev, [connectionId]: true }))
+    try {
+      const res = await fetch(`/api/connections/${connectionId}/proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ connectionId }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data?.success && data.proxyUrl) {
+        setProxyLinks((prev) => ({
+          ...prev,
+          [connectionId]: { proxyUrl: data.proxyUrl as string, createdAt: new Date().toISOString() },
+        }))
+      } else {
+        setProxyErrors((prev) => ({ ...prev, [connectionId]: data?.error || "Unable to create proxy" }))
+      }
+    } catch (err) {
+      setProxyErrors((prev) => ({ ...prev, [connectionId]: "Unexpected error creating proxy" }))
+    } finally {
+      setProxyGenerating((prev) => ({ ...prev, [connectionId]: false }))
     }
   }
 
@@ -494,10 +525,44 @@ export default function ConnectionsPage() {
                     <RefreshCw className="mr-2 h-4 w-4" />
                     {checking[connection.id] ? "Checking…" : "Health check"}
                   </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={proxyGenerating[connection.id]}
+                    onClick={() => handleCreateProxyUrl(connection.id)}
+                  >
+                    {proxyGenerating[connection.id] ? "Preparing proxy…" : "Create proxy URL"}
+                  </Button>
                   <Link href="/dashboard/monitoring" className="text-sm font-medium text-slate-700 underline hover:text-slate-900">
                     View monitoring
                   </Link>
                 </div>
+
+                {(proxyLinks[connection.id] || proxyErrors[connection.id]) && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                    {proxyLinks[connection.id] && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-500">Proxy URL</p>
+                            <p className="break-all font-mono text-xs text-slate-900">{proxyLinks[connection.id].proxyUrl}</p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigator.clipboard?.writeText(proxyLinks[connection.id].proxyUrl)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copy
+                          </Button>
+                        </div>
+                        <p className="text-xs text-slate-500">Share this URL with teammates who need a tunneled connection. It is scoped to this database only.</p>
+                      </div>
+                    )}
+                    {proxyErrors[connection.id] && (
+                      <p className="text-xs text-rose-600">{proxyErrors[connection.id]}</p>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })

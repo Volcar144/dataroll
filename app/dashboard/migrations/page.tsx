@@ -57,8 +57,10 @@ export default function MigrationsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newMigrationData, setNewMigrationData] = useState({
     name: '',
-    description: '',
-    type: 'schema',
+    version: '',
+    type: 'PRISMA' as 'PRISMA' | 'DRIZZLE' | 'RAW_SQL',
+    filePath: '',
+    content: '',
     databaseConnectionId: '',
   })
   const [connections, setConnections] = useState<any[]>([])
@@ -307,7 +309,8 @@ export default function MigrationsPage() {
   }
 
   const createMigration = async () => {
-    if (!newMigrationData.name || !newMigrationData.databaseConnectionId || !teamId) {
+    if (!newMigrationData.name || !newMigrationData.version || !newMigrationData.filePath || 
+        !newMigrationData.content || !newMigrationData.databaseConnectionId || !teamId) {
       alert('Please fill in all required fields')
       return
     }
@@ -328,21 +331,41 @@ export default function MigrationsPage() {
       if (result.success) {
         posthog.capture('migration_created', {
           migration_name: newMigrationData.name,
+          migration_version: newMigrationData.version,
+          migration_type: newMigrationData.type,
           connection_id: newMigrationData.databaseConnectionId,
         })
         
         // Reset form and close modal
-        setNewMigrationData({ name: '', description: '', type: 'schema', databaseConnectionId: '' })
+        setNewMigrationData({ 
+          name: '', 
+          version: '', 
+          type: 'PRISMA', 
+          filePath: '', 
+          content: '', 
+          databaseConnectionId: '' 
+        })
         setShowCreateModal(false)
         
         // Refresh migrations list
         fetchTeamAndMigrations()
       } else {
-        alert(result.error?.message || 'Failed to create migration')
+        const errorMessage = result.error?.message || 'Failed to create migration'
+        alert(errorMessage)
+        
+        // Track error to PostHog
+        posthog.capture('migration_creation_failed', {
+          error: errorMessage,
+          validation_errors: result.error?.code === 'INTERNAL_ERROR' ? result.error.message : undefined,
+        })
       }
     } catch (error) {
       console.error('Failed to create migration:', error)
-      alert('Error creating migration')
+      const errorMessage = 'Error creating migration'
+      alert(errorMessage)
+      
+      // Track exception to PostHog
+      posthog.captureException(error)
     } finally {
       setCreatingMigration(false)
     }
@@ -465,7 +488,7 @@ export default function MigrationsPage() {
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
-                    Migration Name
+                    Migration Name *
                   </label>
                   <input
                     type="text"
@@ -478,7 +501,48 @@ export default function MigrationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
-                    Database Connection
+                    Version *
+                  </label>
+                  <input
+                    type="text"
+                    value={newMigrationData.version}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, version: e.target.value }))}
+                    placeholder="e.g., 20260121_001 or 1.0.0"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    Type *
+                  </label>
+                  <select
+                    value={newMigrationData.type}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, type: e.target.value as 'PRISMA' | 'DRIZZLE' | 'RAW_SQL' }))}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  >
+                    <option value="PRISMA">Prisma</option>
+                    <option value="DRIZZLE">Drizzle</option>
+                    <option value="RAW_SQL">Raw SQL</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    File Path *
+                  </label>
+                  <input
+                    type="text"
+                    value={newMigrationData.filePath}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, filePath: e.target.value }))}
+                    placeholder="e.g., prisma/migrations/20260121_001_add_users/migration.sql"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    Database Connection *
                   </label>
                   <select
                     value={newMigrationData.databaseConnectionId}
@@ -494,14 +558,14 @@ export default function MigrationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
-                    Description (optional)
+                    Migration SQL/Content *
                   </label>
                   <textarea
-                    value={newMigrationData.description}
-                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Add notes about this migration..."
-                    rows={3}
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                    value={newMigrationData.content}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="CREATE TABLE users (&#10;  id SERIAL PRIMARY KEY,&#10;  email VARCHAR(255) UNIQUE NOT NULL&#10;);"
+                    rows={8}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-mono focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                   />
                 </div>
               </div>

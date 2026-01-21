@@ -102,11 +102,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response)
   } catch (error) {
-    logger.error('Failed to list database connections', error instanceof Error ? error : undefined, {
-      userId: session?.user?.id,
-      teamId: new URL(request.url).searchParams.get('teamId'),
-    })
-
+    const logger = (await import('@/lib/logger')).default;
+    logger.error({ msg: 'Failed to list database connections', error });
+    const { captureServerException } = await import('@/lib/posthog-server');
+    await captureServerException(error instanceof Error ? error : new Error('Unknown error'), session?.user?.id, { route: 'GET /api/connections', teamId: new URL(request.url).searchParams.get('teamId') });
     return NextResponse.json(formatError(error), { status: 500 })
   }
 }
@@ -198,6 +197,24 @@ export async function POST(request: NextRequest) {
       teamId: validatedData.teamId,
     })
 
+    // Create audit log
+    const { createAuditLog } = await import('@/lib/audit')
+    await createAuditLog({
+      action: 'CONNECTION_CREATE',
+      resource: 'database_connection',
+      resourceId: connection.id,
+      details: {
+        name: connection.name,
+        type: connection.type,
+        host: connection.host,
+        database: connection.database,
+      },
+      teamId: validatedData.teamId,
+      userId: session.user.id,
+      ipAddress: getClientIP(request),
+      userAgent: request.headers.get('user-agent') || undefined,
+    })
+
     // Track connection created event in PostHog
     const posthog = getPostHogClient()
     posthog.capture({
@@ -219,10 +236,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 })
   } catch (error) {
-    logger.error('Failed to create database connection', error instanceof Error ? error : undefined, {
-      userId: session?.user?.id,
-    })
-
+    const logger = (await import('@/lib/logger')).default;
+    logger.error({ msg: 'Failed to create database connection', error });
+    const { captureServerException } = await import('@/lib/posthog-server');
+    await captureServerException(error instanceof Error ? error : new Error('Unknown error'), session?.user?.id, { route: 'POST /api/connections' });
     return NextResponse.json(formatError(error), { status: 500 })
   }
 }

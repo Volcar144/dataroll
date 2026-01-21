@@ -64,6 +64,11 @@ export default function Dashboard() {
     category: 'Navigation'
   });
 
+  useShortcut('w', () => router.push('/dashboard/workflows'), {
+    description: 'Go to Workflows',
+    category: 'Navigation'
+  });
+
   useShortcut('p', () => router.push('/profile'), {
     description: 'Go to Profile',
     category: 'Navigation'
@@ -126,37 +131,48 @@ export default function Dashboard() {
     }
   }
 
-  if (isPending || loading) {
+  if (isPending) {
+    // Show nothing during initial auth check to avoid flash
+    return null
+  }
+
+  if (!session) {
+    return null
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <div className="min-h-screen bg-gradient-to-b from-zinc-50 via-white to-zinc-100 dark:from-black dark:via-zinc-950 dark:to-zinc-900">
         {/* Header */}
-        <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div>
-                <Skeleton className="h-8 w-32 mb-1" />
-                <Skeleton className="h-4 w-48" />
+        <header className="border-b border-zinc-200/60 dark:border-zinc-800/60 bg-white/70 dark:bg-zinc-950/60 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full bg-zinc-900 text-white px-3 py-1 text-xs font-semibold tracking-wide dark:bg-white dark:text-zinc-900">
+                Control Deck
               </div>
-              <div className="flex items-center space-x-4">
-                <Skeleton className="h-8 w-8 rounded" />
-                <Skeleton className="h-8 w-16 rounded" />
+              <div className="flex flex-wrap items-center gap-3">
+                <div>
+                  <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Operations Dashboard</h1>
+                  <Skeleton className="h-4 w-48 mt-1" />
+                </div>
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <KeyboardShortcutsHelp />
+              <ThemeToggle />
+              <Skeleton className="h-9 w-20 rounded-full" />
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-10">
           <DashboardStatsSkeleton />
           <QuickActionsSkeleton />
           <RecentActivitySkeleton />
         </main>
       </div>
     )
-  }
-
-  if (!session) {
-    return null
   }
 
   return (
@@ -210,6 +226,7 @@ export default function Dashboard() {
             <div className="mt-4 grid gap-3">
               <QuickLink href="/dashboard/connections" accent="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200" title="Connections" description="Health, tests, and new DBs" />
               <QuickLink href="/dashboard/migrations" accent="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200" title="Migrations" description="Run, rollback, review" />
+              <QuickLink href="/dashboard/workflows" accent="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200" title="Workflows" description="Automate operations" />
               <QuickLink href="/dashboard/audit" accent="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200" title="Audit" description="Filters and exports" />
               <QuickLink href="/dashboard/teams" accent="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200" title="Teams" description="Switch and organize" />
             </div>

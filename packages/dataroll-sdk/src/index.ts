@@ -284,7 +284,7 @@ export async function login(options: { baseUrl?: string } = {}): Promise<{ apiKe
     console.log('\n📱 Device Authorization in Progress');
     console.log(`Please visit: ${verification_uri}`);
     console.log(`Enter code: ${user_code}\n`);
-    console.log(`⏳ Waiting for authorization... (polling every ${interval}s)`);
+    console.log(`⏳ Waiting for authorization... `);
 
     // Poll for token
     const tokenData = await pollForToken(authClient, device_code, interval);

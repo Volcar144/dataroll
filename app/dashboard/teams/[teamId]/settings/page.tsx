@@ -70,34 +70,50 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
   const fetchTeamData = async () => {
     try {
       setLoading(true)
-      
+      let teamError = false;
       // Fetch team details
       const teamRes = await fetch(`/api/teams/${params.teamId}`)
       const teamData = await teamRes.json()
-      
       if (teamData.success) {
         setTeam(teamData.data)
         setTeamName(teamData.data.name)
         setTeamDescription(teamData.data.description || "")
+      } else {
+        teamError = true;
       }
-      
       // Fetch members
       const membersRes = await fetch(`/api/teams/${params.teamId}/members`)
       const membersData = await membersRes.json()
-      
       if (membersData.success) {
         setMembers(membersData.data || [])
       }
-      
       // Fetch invitations
       const invitesRes = await fetch(`/api/teams/${params.teamId}/invitations`)
       const invitesData = await invitesRes.json()
-      
       if (invitesData.success) {
         setInvitations(invitesData.data || [])
       }
+      if (teamError) {
+        setTeam({
+          id: params.teamId,
+          name: 'Unknown Team',
+          slug: '',
+          description: 'Failed to load team',
+          createdAt: '',
+          createdById: '',
+          error: true,
+        } as any)
+      }
     } catch (error) {
-      console.error('Failed to load team data', error)
+      setTeam({
+        id: params.teamId,
+        name: 'Unknown Team',
+        slug: '',
+        description: 'Failed to load team',
+        createdAt: '',
+        createdById: '',
+        error: true,
+      } as any)
     } finally {
       setLoading(false)
     }
@@ -214,13 +230,26 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
     }
   }
 
-  if (loading || !team) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
         <div className="max-w-6xl mx-auto">
           <div className="animate-pulse space-y-4">
             <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-1/4"></div>
             <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (team && (team as any).error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
+            <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-4">Failed to load team settings</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Unable to load team data. Please check your network or try again later.</p>
+            <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg" onClick={() => window.location.reload()}>Retry</button>
           </div>
         </div>
       </div>
