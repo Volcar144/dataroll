@@ -1,5 +1,5 @@
 ./packages/
-node_modules/thread-stream
+node_modules/thread-stream/**
 node_modules/pino/test
 node_modules/pino/docs
 node_modules/pino/examples

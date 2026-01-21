@@ -1,25 +1,20 @@
 'use server';
 
-import pino from 'pino';
-import { transport as pinoLogflareTransport } from 'pino-logflare';
-
-const logflareApiKey = process.env.LOGFLARE_API_KEY;
-const logflareSourceToken = process.env.LOGFLARE_SOURCE_TOKEN;
-
-let logger: pino.Logger;
-
-if (logflareApiKey && logflareSourceToken) {
-  const transport = pino.transport({
-    target: 'pino-logflare',
-    options: {
-      apiKey: logflareApiKey,
-      sourceToken: logflareSourceToken,
-      // Optionally add onError/onPreparePayload here
-    },
-  });
-  logger = pino(transport);
-} else {
-  logger = pino();
-}
+// Simple logger wrapper that uses console by default
+// In production, this can be extended to use pino with Logflare
+const logger = {
+  error: (data: any) => {
+    console.error('[ERROR]', typeof data === 'string' ? data : JSON.stringify(data));
+  },
+  info: (data: any) => {
+    console.info('[INFO]', typeof data === 'string' ? data : JSON.stringify(data));
+  },
+  debug: (data: any) => {
+    console.debug('[DEBUG]', typeof data === 'string' ? data : JSON.stringify(data));
+  },
+  warn: (data: any) => {
+    console.warn('[WARN]', typeof data === 'string' ? data : JSON.stringify(data));
+  },
+};
 
 export default logger;
