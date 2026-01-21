@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
-import { executeMigration } from '@/lib/migration-execution';import { DatabaseConnectionService } from '@/lib/database-connection';
+import { executeMigration } from '@/lib/migration-execution';
+import { DatabaseConnectionService } from '@/lib/database-connection';
+import { createAuditLog } from '@/lib/audit';
 const MigrationRequestSchema = z.object({
   connectionId: z.string(),
   name: z.string(),
@@ -80,6 +82,18 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Audit log for CI/CD migration creation
+      await createAuditLog({
+        action: 'MIGRATION_CREATED',
+        resource: 'migration',
+        resourceId: migration.id,
+        details: { name: validatedData.name, type: validatedData.type, via: 'CI/CD API' },
+        teamId: connection.teamId,
+        userId,
+        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      });
+
       if (validatedData.autoExecute) {
         // Execute the migration
         const migrationWithConnection = await prisma.migration.findUnique({
@@ -101,6 +115,17 @@ export async function POST(request: NextRequest) {
               executedAt: new Date(),
             },
           });
+          
+          await createAuditLog({
+            action: 'MIGRATION_EXECUTED',
+            resource: 'migration',
+            resourceId: migration.id,
+            details: { name: validatedData.name, via: 'CI/CD API', autoExecute: true },
+            teamId: connection.teamId,
+            userId,
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
+            userAgent: request.headers.get('user-agent') || undefined,
+          });
         } else {
           await prisma.migration.update({
             where: { id: migration.id },
@@ -109,6 +134,18 @@ export async function POST(request: NextRequest) {
               executedAt: new Date(),
             },
           });
+          
+          await createAuditLog({
+            action: 'MIGRATION_EXECUTED',
+            resource: 'migration',
+            resourceId: migration.id,
+            details: { name: validatedData.name, via: 'CI/CD API', autoExecute: true, failed: true, error: result.error },
+            teamId: connection.teamId,
+            userId,
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
+            userAgent: request.headers.get('user-agent') || undefined,
+          });
+          
           throw new Error(`Migration execution failed: ${result.error}`);
         }
       }
@@ -149,6 +186,18 @@ export async function POST(request: NextRequest) {
         validatedData.connectionId
       );
 
+      // Audit log for query execution via CI/CD
+      await createAuditLog({
+        action: 'CONNECTION_UPDATED',
+        resource: 'database_connection',
+        resourceId: connection.id,
+        details: { via: 'CI/CD API', queryLength: validatedData.query.length, action: 'query_execution' },
+        teamId: connection.teamId,
+        userId,
+        ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || undefined,
+        userAgent: request.headers.get('user-agent') || undefined,
+      });
+
       return NextResponse.json({
         success: true,
         message: 'Query executed successfully',
@@ -161,10 +210,26 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('CI/CD API error:', error);
+    const logger = await import('@/lib/logger');
+    const { captureServerException } = await import('@/lib/posthog-server');
+    
+    logger.default.error('CI/CD API error:');
+    logger.default.error(error);
+    
+    if (error instanceof Error) {
+      await captureServerException(error, 'api-cicd', {
+        context: 'CI/CD API',
+        endpoint: '/api/cicd',
+        method: request.method,
+      });
+    }
+    
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

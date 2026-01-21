@@ -2,7 +2,7 @@
 
 // Simple logger wrapper that uses console by default
 // In production, this can be extended to use pino with Logflare
-const logger = {
+export const logger = {
   error: (data: any) => {
     console.error('[ERROR]', typeof data === 'string' ? data : JSON.stringify(data));
   },

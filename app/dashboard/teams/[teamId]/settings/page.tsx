@@ -265,7 +265,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
             Team Settings
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage {team.name} settings and members
+            {team ? `Manage ${team.name} settings and members` : 'Loading team settings...'}
           </p>
         </div>
 
@@ -353,7 +353,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
                 </label>
                 <input
                   type="text"
-                  value={team.slug}
+                  value={team?.slug || ''}
                   disabled
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400"
                 />
@@ -404,7 +404,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
                     <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                       {member.role}
                     </span>
-                    {member.user.id !== team.createdById && (
+                    {member.user.id !== team?.createdById && (
                       <Button
                         variant="outline"
                         size="sm"
