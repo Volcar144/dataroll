@@ -11,6 +11,17 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
   debug: process.env.NODE_ENV === "development",
 });
 
+// Helper to capture exceptions with proper PostHog method
+export function captureException(
+  error: Error | string,
+  additionalProperties?: Record<string, any>
+) {
+  const err = typeof error === 'string' ? new Error(error) : error;
+  posthog.captureException(err, {
+    ...(additionalProperties || {}),
+  });
+}
+
 // IMPORTANT: Never combine this approach with other client-side PostHog initialization approaches,
 // especially components like a PostHogProvider. instrumentation-client.ts is the correct solution
 // for initializing client-side PostHog in Next.js 15.3+ apps.

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import posthog from "posthog-js"
-import { ChevronDown, Download, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { ChevronDown, Download, Clock, CheckCircle, XCircle, AlertCircle, X } from "lucide-react"
 
 interface Migration {
   id: string
@@ -54,6 +54,15 @@ export default function MigrationsPage() {
   const [selectedMigration, setSelectedMigration] = useState<Migration | null>(null)
   const [teamId, setTeamId] = useState<string | null>(null)
   const [expandedMigration, setExpandedMigration] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newMigrationData, setNewMigrationData] = useState({
+    name: '',
+    description: '',
+    type: 'schema',
+    databaseConnectionId: '',
+  })
+  const [connections, setConnections] = useState<any[]>([])
+  const [creatingMigration, setCreatingMigration] = useState(false)
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -82,10 +91,20 @@ export default function MigrationsPage() {
       setTeamId(firstTeamId)
       
       // Now fetch migrations with teamId
-      const response = await fetch(`/api/migrations?teamId=${firstTeamId}`)
-      const data = await response.json()
-      if (data.success) {
-        setMigrations(data.data || [])
+      const [migrationsRes, connectionsRes] = await Promise.all([
+        fetch(`/api/migrations?teamId=${firstTeamId}`),
+        fetch(`/api/connections?teamId=${firstTeamId}`)
+      ])
+      
+      const migrationsData = await migrationsRes.json()
+      const connectionsData = await connectionsRes.json()
+      
+      if (migrationsData.success) {
+        setMigrations(migrationsData.data || [])
+      }
+      
+      if (connectionsData.data) {
+        setConnections(connectionsData.data || [])
       }
     } catch (error) {
       console.error('Failed to fetch migrations:', error)
@@ -287,6 +306,48 @@ export default function MigrationsPage() {
     document.body.removeChild(element)
   }
 
+  const createMigration = async () => {
+    if (!newMigrationData.name || !newMigrationData.databaseConnectionId || !teamId) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    setCreatingMigration(true)
+    try {
+      const response = await fetch('/api/migrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newMigrationData,
+          teamId,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        posthog.capture('migration_created', {
+          migration_name: newMigrationData.name,
+          connection_id: newMigrationData.databaseConnectionId,
+        })
+        
+        // Reset form and close modal
+        setNewMigrationData({ name: '', description: '', type: 'schema', databaseConnectionId: '' })
+        setShowCreateModal(false)
+        
+        // Refresh migrations list
+        fetchTeamAndMigrations()
+      } else {
+        alert(result.error?.message || 'Failed to create migration')
+      }
+    } catch (error) {
+      console.error('Failed to create migration:', error)
+      alert('Error creating migration')
+    } finally {
+      setCreatingMigration(false)
+    }
+  }
+
   if (isPending || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -387,6 +448,83 @@ export default function MigrationsPage() {
       )}
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-8">
+        {/* Create Migration Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="relative mx-4 w-full max-w-md rounded-2xl border border-zinc-200/70 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Create Migration</h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    Migration Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newMigrationData.name}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Add users table"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    Database Connection
+                  </label>
+                  <select
+                    value={newMigrationData.databaseConnectionId}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, databaseConnectionId: e.target.value }))}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  >
+                    <option value="">Select a connection</option>
+                    {connections.map(conn => (
+                      <option key={conn.id} value={conn.id}>{conn.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={newMigrationData.description}
+                    onChange={(e) => setNewMigrationData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Add notes about this migration..."
+                    rows={3}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createMigration}
+                  disabled={creatingMigration}
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-700"
+                >
+                  {creatingMigration ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <section className="grid gap-4 sm:grid-cols-5">
           <StatCard label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-200" />
@@ -403,7 +541,10 @@ export default function MigrationsPage() {
             </div>
             <h3 className="mb-2 text-lg font-semibold text-zinc-900 dark:text-zinc-50">No migrations yet</h3>
             <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">Create your first migration to manage schema changes.</p>
-            <button className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+            >
               New migration
             </button>
           </div>
