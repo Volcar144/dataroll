@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
     // Create audit log
     const { createAuditLog } = await import('@/lib/audit')
     await createAuditLog({
-      action: 'CONNECTION_CREATE',
+      action: 'CONNECTION_CREATED',
       resource: 'database_connection',
       resourceId: connection.id,
       details: {
