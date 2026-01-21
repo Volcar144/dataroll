@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw, Home, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 
 interface ErrorBoundaryProps {
   error?: Error;
@@ -15,18 +16,18 @@ export function ErrorBoundary({ error, reset }: ErrorBoundaryProps) {
 
   useEffect(() => {
     setMounted(true);
-    // Log error to Pino and PostHog
+    // Track error in PostHog (client-side only)
     if (error && typeof window !== 'undefined') {
-      (async () => {
-        try {
-          const logger = (await import('@/lib/logger')).default;
-          logger.error({ msg: 'Client error caught by boundary', error: error.message });
-          const { captureServerException } = await import('@/lib/posthog-server');
-          await captureServerException(error, undefined, { context: 'client_error_boundary' });
-        } catch (err) {
-          console.error('Failed to log error', err);
-        }
-      })();
+      try {
+        posthog.captureException(error, {
+          $exception_type: error.name,
+          $exception_message: error.message,
+          $exception_stack_trace_raw: error.stack,
+          context: 'client_error_boundary',
+        });
+      } catch (err) {
+        console.error('Failed to track error', err);
+      }
     }
   }, [error]);
 

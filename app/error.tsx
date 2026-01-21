@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import { AlertTriangle, RefreshCw, Home } from "lucide-react"
 import Link from "next/link"
+import posthog from "posthog-js"
 
 export default function Error({
   error,
@@ -12,17 +13,17 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log error to Pino and PostHog
-    (async () => {
-      try {
-        const logger = (await import('@/lib/logger')).default
-        logger.error({ msg: 'Global error boundary caught error', error: error.message, digest: error.digest })
-        const { captureServerException } = await import('@/lib/posthog-server')
-        await captureServerException(error, undefined, { context: 'global_error_boundary', digest: error.digest })
-      } catch (err) {
-        console.error('Failed to log error', err)
-      }
-    })()
+    // Track error in PostHog (client-side only)
+    try {
+      posthog.captureException(error, {
+        $exception_type: error.name,
+        $exception_message: error.message,
+        $exception_stack_trace_raw: error.stack,
+        digest: error.digest,
+      })
+    } catch (err) {
+      console.error('Failed to track error', err)
+    }
   }, [error])
 
   return (
