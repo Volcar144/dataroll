@@ -167,6 +167,10 @@ export async function POST(request: NextRequest) {
       // We'll use a placeholder that we'll update later
       const tempDefinitionId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       
+      // Serialize nodes and edges
+      const nodesJson = JSON.stringify(validatedData.nodes || []);
+      const edgesJson = JSON.stringify(validatedData.edges || []);
+
       // Create the workflow first
       const workflow = await tx.workflow.create({
         data: {
@@ -185,8 +189,8 @@ export async function POST(request: NextRequest) {
         validatedData.description || undefined,
         validatedData.trigger,
         [],
-        JSON.stringify([]), // Empty nodes
-        JSON.stringify([]), // Empty edges
+        nodesJson,
+        edgesJson,
       );
 
       // Create the definition with the actual workflow ID
@@ -195,8 +199,8 @@ export async function POST(request: NextRequest) {
           workflowId: workflow.id,
           content: WorkflowParser.stringify(initialDefinition),
           format: 'json',
-          nodes: JSON.stringify([]),
-          edges: JSON.stringify([]),
+          nodes: nodesJson,
+          edges: edgesJson,
           version: 1,
           createdBy: session.user.id,
         },

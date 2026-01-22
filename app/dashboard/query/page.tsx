@@ -216,7 +216,14 @@ export default function QueryEditorPage() {
         }),
       })
       
-      const data = await response.json()
+      // Check if response is ok and has content
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : { error: { message: 'Empty response from server' } }
+      } catch (parseError) {
+        data = { error: { message: `Failed to parse response: ${text.substring(0, 100)}` } }
+      }
       const duration = Date.now() - startTime
       
       if (data.error) {

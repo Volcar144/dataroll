@@ -16,7 +16,7 @@ export default function SecurityPage() {
     {
       icon: Server,
       title: "Secure Infrastructure",
-      description: "Hosted on AWS with multi-region redundancy and DDoS protection.",
+      description: "Hosted on Vercel with multi-region redundancy and DDoS protection.",
     },
     {
       icon: FileText,

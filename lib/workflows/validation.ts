@@ -96,6 +96,21 @@ export const CreateWorkflowSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   trigger: z.enum(['manual', 'scheduled', 'webhook', 'event']),
+  nodes: z.array(z.object({
+    id: z.string(),
+    type: z.string(),
+    label: z.string(),
+    position: z.object({
+      x: z.number(),
+      y: z.number(),
+    }).optional(),
+    data: z.record(z.string(), z.any()),
+  })).optional(),
+  edges: z.array(z.object({
+    source: z.string(),
+    target: z.string(),
+    label: z.string().optional(),
+  })).optional(),
 });
 
 export const UpdateWorkflowSchema = z.object({

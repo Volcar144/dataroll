@@ -34,7 +34,10 @@ interface Invitation {
   createdAt: string
 }
 
-export default function TeamSettingsPage({ params }: { params: { teamId: string } }) {
+import { use } from 'react'
+
+export default function TeamSettingsPage({ params }: { params: Promise<{ teamId: string }> }) {
+  const resolvedParams = use(params)
   const { data: session, isPending } = useSession()
   const router = useRouter()
   const [team, setTeam] = useState<Team | null>(null)
@@ -54,6 +57,8 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
   const [inviteRole, setInviteRole] = useState<string>("DEVELOPER")
   const [inviting, setInviting] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  
+  const teamId = resolvedParams.teamId
 
   useEffect(() => {
     if (!isPending && !session) {
@@ -62,17 +67,17 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
   }, [session, isPending, router])
 
   useEffect(() => {
-    if (session && params.teamId) {
+    if (session && teamId) {
       fetchTeamData()
     }
-  }, [session, params.teamId])
+  }, [session, teamId])
 
   const fetchTeamData = async () => {
     try {
       setLoading(true)
       let teamError = false;
       // Fetch team details
-      const teamRes = await fetch(`/api/teams/${params.teamId}`)
+      const teamRes = await fetch(`/api/teams/${teamId}`)
       const teamData = await teamRes.json()
       if (teamData.success) {
         setTeam(teamData.data)
@@ -82,20 +87,20 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
         teamError = true;
       }
       // Fetch members
-      const membersRes = await fetch(`/api/teams/${params.teamId}/members`)
+      const membersRes = await fetch(`/api/teams/${teamId}/members`)
       const membersData = await membersRes.json()
       if (membersData.success) {
         setMembers(membersData.data || [])
       }
       // Fetch invitations
-      const invitesRes = await fetch(`/api/teams/${params.teamId}/invitations`)
+      const invitesRes = await fetch(`/api/teams/${teamId}/invitations`)
       const invitesData = await invitesRes.json()
       if (invitesData.success) {
         setInvitations(invitesData.data || [])
       }
       if (teamError) {
         setTeam({
-          id: params.teamId,
+          id: teamId,
           name: 'Unknown Team',
           slug: '',
           description: 'Failed to load team',
@@ -106,7 +111,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
       }
     } catch (error) {
       setTeam({
-        id: params.teamId,
+        id: teamId,
         name: 'Unknown Team',
         slug: '',
         description: 'Failed to load team',
@@ -124,7 +129,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
     setSaving(true)
     
     try {
-      const res = await fetch(`/api/teams/${params.teamId}`, {
+      const res = await fetch(`/api/teams/${teamId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,7 +156,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
     setInviteError(null)
     
     try {
-      const res = await fetch(`/api/teams/${params.teamId}/invitations`, {
+      const res = await fetch(`/api/teams/${teamId}/invitations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +186,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
     if (!confirm('Are you sure you want to remove this member?')) return
     
     try {
-      const res = await fetch(`/api/teams/${params.teamId}/members/${memberId}`, {
+      const res = await fetch(`/api/teams/${teamId}/members/${memberId}`, {
         method: 'DELETE'
       })
       
@@ -197,7 +202,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
-      const res = await fetch(`/api/teams/${params.teamId}/invitations/${invitationId}`, {
+      const res = await fetch(`/api/teams/${teamId}/invitations/${invitationId}`, {
         method: 'DELETE'
       })
       
@@ -216,7 +221,7 @@ export default function TeamSettingsPage({ params }: { params: { teamId: string 
     if (!confirm('This will delete all connections, migrations, and data associated with this team. Type DELETE to confirm.')) return
     
     try {
-      const res = await fetch(`/api/teams/${params.teamId}`, {
+      const res = await fetch(`/api/teams/${teamId}`, {
         method: 'DELETE'
       })
       
