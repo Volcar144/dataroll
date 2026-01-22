@@ -3,6 +3,8 @@ import { withPostHogConfig } from "@posthog/nextjs-config";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Externalize pino and related packages to prevent Turbopack from bundling test files
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream'],
   async headers() {
     return [
       {

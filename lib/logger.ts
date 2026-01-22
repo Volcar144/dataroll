@@ -1,5 +1,3 @@
-'use server';
-
 import pino from 'pino';
 
 // Create Logflare transport if credentials are available

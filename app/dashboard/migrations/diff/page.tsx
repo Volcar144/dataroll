@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSession } from "@/lib/auth-service"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -238,7 +238,7 @@ function generateSQLDiff(before: string, after: string): { line: string; type: '
   return result
 }
 
-export default function DiffViewerPage() {
+function DiffViewerContent() {
   const { data: session, isPending } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -723,5 +723,21 @@ export default function DiffViewerPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+function DiffViewerLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+    </div>
+  )
+}
+
+export default function DiffViewerPage() {
+  return (
+    <Suspense fallback={<DiffViewerLoading />}>
+      <DiffViewerContent />
+    </Suspense>
   )
 }
