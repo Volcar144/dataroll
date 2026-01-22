@@ -46,6 +46,10 @@ model User {
   workflowApprovals       WorkflowApproval[]       @relation("WorkflowApprover")
   approvalResponses       ApprovalResponse[]
   createdWorkflows        Workflow[]               @relation("WorkflowCreator")
+  integrations            UserIntegration[]
+  notifications           Notification[]
+  createdSnapshots        MigrationSnapshot[]      @relation("SnapshotCreator")
+  executedRollbacks       MigrationRollback[]      @relation("RollbackExecutor")
 
   twoFactorEnabled Boolean?    @default(false)
   passkeys         Passkey[]
@@ -141,6 +145,7 @@ model Team {
   autoApprovalRules   AutoApprovalRule[]
   apiKeys             ApiKey[]
   workflows           Workflow[]
+  integrations        UserIntegration[]
 
   @@map("teams")
 }
@@ -400,6 +405,7 @@ model Migration {
   rollbacks           MigrationRollback[]
   approvals           MigrationApproval[]
   scheduledExecutions ScheduledExecution[]
+  snapshot            MigrationSnapshot?
 
   @@unique([teamId, version, databaseConnectionId])
   @@map("migrations")
@@ -440,15 +446,39 @@ enum ExecutionStatus {
   ROLLBACK
 }
 
+model MigrationSnapshot {
+  id              String   @id @default(cuid())
+  migrationId     String
+  schemaVersion   String
+  rollbackSql     String   @db.Text
+  affectedTables  String[] // Array of table names
+  preState        String?  @db.Text // JSON snapshot of affected table schemas before migration
+  metadata        String?  @db.Text // Additional JSON metadata
+  createdAt       DateTime @default(now())
+  createdBy       String
+
+  migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  creator   User      @relation("SnapshotCreator", fields: [createdBy], references: [id])
+
+  @@unique([migrationId])
+  @@map("migration_snapshots")
+}
+
 model MigrationRollback {
   id             String   @id @default(cuid())
   migrationId    String
+  snapshotId     String?
   reason         String?
+  rollbackSql    String?  @db.Text // The SQL that was executed
+  status         String   @default("pending") // pending, executing, success, failed
+  error          String?  @db.Text
+  duration       Int?     // milliseconds
   rolledBackAt   DateTime @default(now())
+  completedAt    DateTime?
   rolledBackBy   String
-  backupLocation String?
 
   migration Migration @relation(fields: [migrationId], references: [id], onDelete: Cascade)
+  rollbackUser User @relation("RollbackExecutor", fields: [rolledBackBy], references: [id])
 
   @@map("migration_rollbacks")
 }
@@ -535,6 +565,26 @@ model NotificationPreferences {
   @@map("notification_preferences")
 }
 
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // approval_request, approval_response, workflow_success, workflow_failure, team_invite, system
+  title       String
+  message     String
+  link        String?  // Optional link to related resource
+  metadata    Json?    // Additional context data
+  read        Boolean  @default(false)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
 model AutoApprovalRule {
   id           String   @id @default(cuid())
   userId       String
@@ -612,6 +662,41 @@ enum QueryStatus {
   REJECTED
   EXECUTED
   FAILED
+}
+
+// User Integrations for external services (email, Slack, webhooks)
+model UserIntegration {
+  id        String   @id @default(cuid())
+  userId    String
+  teamId    String?
+  type      IntegrationType
+  name      String   // Display name for this integration
+  
+  // Encrypted credentials stored as JSON
+  // For email: { host, port, username, password, fromAddress }
+  // For Slack: { webhookUrl, channel }
+  // For webhook: { url, headers, authType }
+  config    String   @db.Text // Encrypted JSON config
+  
+  isActive  Boolean  @default(true)
+  isDefault Boolean  @default(false) // Default integration for this type
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team? @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, name])
+  @@map("user_integrations")
+}
+
+enum IntegrationType {
+  EMAIL
+  SLACK
+  WEBHOOK
+  PAGERDUTY
+  DISCORD
+  TEAMS
 }
 
 // Workflow System Models

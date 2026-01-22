@@ -1,5 +1,83 @@
 import { prisma } from '@/lib/prisma';
 import { EmailService } from '@/lib/email';
+import { Prisma } from '@prisma/client';
+
+// Types for notifications
+export type NotificationType = 
+  | 'approval_request' 
+  | 'approval_response' 
+  | 'workflow_success' 
+  | 'workflow_failure' 
+  | 'team_invite' 
+  | 'system'
+  | 'migration_complete'
+  | 'migration_failed';
+
+export interface CreateNotificationInput {
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  link?: string;
+  metadata?: Prisma.InputJsonValue;
+}
+
+// Helper function to create in-app notifications
+export async function createNotification(input: CreateNotificationInput) {
+  try {
+    return await prisma.notification.create({
+      data: {
+        userId: input.userId,
+        type: input.type,
+        title: input.title,
+        message: input.message,
+        link: input.link,
+        metadata: input.metadata,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create notification:', error);
+    return null;
+  }
+}
+
+// Helper to create notifications for multiple users
+export async function createNotificationsForUsers(
+  userIds: string[], 
+  notification: Omit<CreateNotificationInput, 'userId'>
+) {
+  try {
+    return await prisma.notification.createMany({
+      data: userIds.map(userId => ({
+        userId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        link: notification.link,
+        metadata: notification.metadata,
+      })),
+    });
+  } catch (error) {
+    console.error('Failed to create notifications for users:', error);
+    return null;
+  }
+}
+
+// Get unread notification count for a user
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  try {
+    return await prisma.notification.count({
+      where: {
+        userId,
+        read: false,
+        archived: false,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to get unread notification count:', error);
+    return 0;
+  }
+}
 
 export interface NotificationConfig {
   emailService?: EmailService;
@@ -40,6 +118,22 @@ export class NotificationService {
       }
 
       const teamMembers = connection.team.members;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+      // Create in-app notifications for team members
+      const teamMemberIds = teamMembers
+        .filter((m: { userId: string }) => m.userId !== userId)
+        .map((m: { userId: string }) => m.userId);
+      
+      if (teamMemberIds.length > 0) {
+        await createNotificationsForUsers(teamMemberIds, {
+          type: 'approval_request',
+          title: 'Query Approval Requested',
+          message: `${user.name || user.email} requested approval for a query on ${connection.name}`,
+          link: `${baseUrl}/dashboard/connections/${connectionId}/queries/${queryId}/approve`,
+          metadata: { queryId, connectionId, connectionName: connection.name },
+        });
+      }
 
       // Send email notifications
       if (this.emailService) {

@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       data: { status: 'EXECUTING' }, // Use EXECUTING status during rollback
     })
 
-    let rollbackResult: { success: boolean; error?: string; duration: number }
+    let rollbackResult: { success: boolean; error?: string; duration: number; rollbackSql?: string }
 
     try {
       // Execute the rollback
@@ -125,7 +125,9 @@ export async function POST(request: NextRequest) {
             migrationId: validatedData.migrationId,
             reason: validatedData.reason,
             rolledBackBy: session.user.id,
-            backupLocation,
+            rollbackSql: rollbackResult.rollbackSql || '',
+            status: 'success',
+            completedAt: new Date(),
           },
         })
 
@@ -197,7 +199,7 @@ function canRollbackMigration(migration: any): boolean {
 async function rollbackMigration(
   migration: any,
   options: { force?: boolean; reason?: string }
-): Promise<{ success: boolean; error?: string; duration: number }> {
+): Promise<{ success: boolean; error?: string; duration: number; rollbackSql?: string }> {
   const startTime = Date.now()
 
   try {
@@ -231,7 +233,7 @@ async function rollbackRawSqlMigration(
   migration: any,
   connectionService: DatabaseConnectionService,
   options: { force?: boolean; reason?: string }
-): Promise<{ success: boolean; error?: string; duration: number }> {
+): Promise<{ success: boolean; error?: string; duration: number; rollbackSql?: string }> {
   const startTime = Date.now()
 
   try {
@@ -248,6 +250,7 @@ async function rollbackRawSqlMigration(
     return {
       success: true,
       duration: Date.now() - startTime,
+      rollbackSql,
     }
   } catch (error) {
     return {
@@ -261,7 +264,7 @@ async function rollbackRawSqlMigration(
 async function forceRollbackMigration(
   migration: any,
   connectionService: DatabaseConnectionService
-): Promise<{ success: boolean; error?: string; duration: number }> {
+): Promise<{ success: boolean; error?: string; duration: number; rollbackSql?: string }> {
   const startTime = Date.now()
 
   try {
@@ -277,6 +280,7 @@ async function forceRollbackMigration(
     return {
       success: true,
       duration: Date.now() - startTime,
+      rollbackSql: rollbackSql || undefined,
     }
   } catch (error) {
     return {

@@ -7,6 +7,7 @@ import Link from "next/link"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { KeyboardShortcutsHelp } from "@/components/keyboard-shortcuts-help"
 import { TeamSwitcher } from "@/components/team-switcher"
+import { NotificationBell } from "@/components/notification-bell"
 import { useShortcut } from "@/lib/keyboard-shortcuts"
 import { EmptyState } from "@/components/empty-state"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -158,8 +159,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <KeyboardShortcutsHelp />
-              <ThemeToggle />
+              <KeyboardShortcutsHelp />            <NotificationBell />              <ThemeToggle />
               <Skeleton className="h-9 w-20 rounded-full" />
             </div>
           </div>
@@ -193,6 +193,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <KeyboardShortcutsHelp />
+            <NotificationBell />
             <ThemeToggle />
             <Link
               href="/profile"
@@ -227,6 +228,8 @@ export default function Dashboard() {
               <QuickLink href="/dashboard/connections" accent="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200" title="Connections" description="Health, tests, and new DBs" />
               <QuickLink href="/dashboard/migrations" accent="bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200" title="Migrations" description="Run, rollback, review" />
               <QuickLink href="/dashboard/workflows" accent="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-200" title="Workflows" description="Automate operations" />
+              <QuickLink href="/dashboard/query" accent="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200" title="Query Editor" description="Execute SQL queries" />
+              <QuickLink href="/dashboard/scheduled-jobs" accent="bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200" title="Scheduled Jobs" description="Automated tasks" />
               <QuickLink href="/dashboard/audit" accent="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200" title="Audit" description="Filters and exports" />
               <QuickLink href="/dashboard/teams" accent="bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200" title="Teams" description="Switch and organize" />
             </div>

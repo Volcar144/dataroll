@@ -136,7 +136,7 @@ export const CreateMigrationSchema = z.object({
   content: z.string().min(1),
   databaseConnectionId: z.string().cuid(),
   teamId: z.string().cuid(),
-  dryRun: z.boolean().default(false),
+  description: z.string().optional(),
 })
 
 export const ExecuteMigrationSchema = z.object({

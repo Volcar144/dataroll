@@ -175,9 +175,16 @@ export async function POST(request: NextRequest) {
 
     const migration = await prisma.migration.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        version: validatedData.version,
+        type: validatedData.type,
+        filePath: validatedData.filePath,
+        content: validatedData.content,
+        databaseConnectionId: validatedData.databaseConnectionId,
+        teamId: validatedData.teamId,
         checksum,
         createdById: session.user.id,
+        notes: validatedData.description,
       },
       include: {
         databaseConnection: {

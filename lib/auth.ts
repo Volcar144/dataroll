@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { passkey } from "@better-auth/passkey"
 import { twoFactor, haveIBeenPwned, organization, deviceAuthorization, apiKey } from "better-auth/plugins"
 import { prisma } from "@/lib/prisma"
+import { sendPasswordResetEmail } from "@/lib/email"
 
 const betterAuthBaseUrl = (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://fun-five-psi.vercel.app").replace(/\/+$/, "")
 const betterAuthHost = betterAuthBaseUrl.replace(/^https?:\/\//, "").split("/")[0]
@@ -24,6 +25,12 @@ export const auth = betterAuth({
         minPasswordLength: 12,
         maxPasswordLength: 128,
         autoSignIn: true,
+        // Password reset configuration
+        sendResetPassword: async ({ user, url, token }, request) => {
+            // Don't await to prevent timing attacks
+            void sendPasswordResetEmail(user.email, url, user.name || 'User');
+        },
+        resetPasswordTokenExpiresIn: 3600, // 1 hour
     },
     
     // Social OAuth providers

@@ -398,6 +398,12 @@ export default function MigrationsPage() {
               <p className="text-sm text-zinc-600 dark:text-zinc-400">Plan, execute, and rollback schema changes safely</p>
             </div>
             <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard/migrations/diff"
+                className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-900 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-100 dark:hover:bg-violet-900/50"
+              >
+                Diff Viewer
+              </Link>
               <button
                 onClick={exportMigrationHistory}
                 className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
