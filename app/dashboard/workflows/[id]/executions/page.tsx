@@ -87,9 +87,9 @@ function formatDuration(ms: number | null): string {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-export default function WorkflowExecutionsPage({ params }: { params: Promise<{ workflowId: string }> }) {
+export default function WorkflowExecutionsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
-  const { workflowId } = resolvedParams
+  const workflowId = resolvedParams.id
   const { data: session, isPending } = useSession()
   const router = useRouter()
   const [executions, setExecutions] = useState<WorkflowExecution[]>([])

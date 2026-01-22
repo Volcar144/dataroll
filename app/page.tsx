@@ -1,7 +1,6 @@
 "use client"
 
 import { useSession } from "@/lib/auth-service"
-import { signOut } from "@/lib/auth-client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
@@ -15,10 +14,6 @@ import {
   Activity, 
   Users, 
   Workflow, 
-  FileText, 
-  BarChart3,
-  Settings,
-  Bell,
   ArrowRight,
   CheckCircle2,
   Zap,
@@ -273,254 +268,6 @@ function LandingPage() {
   )
 }
 
-function Dashboard() {
-  const { data: session } = useSession()
-  const router = useRouter()
-
-  // Keyboard shortcuts
-  useShortcut('c', () => router.push('/dashboard/connections'), {
-    description: 'Go to Connections',
-    category: 'Navigation'
-  });
-
-  useShortcut('m', () => router.push('/dashboard/migrations'), {
-    description: 'Go to Migrations',
-    category: 'Navigation'
-  });
-
-  useShortcut('w', () => router.push('/dashboard/workflows'), {
-    description: 'Go to Workflows',
-    category: 'Navigation'
-  });
-
-  useShortcut('t', () => router.push('/dashboard/teams'), {
-    description: 'Go to Teams',
-    category: 'Navigation'
-  });
-
-  const quickLinks = [
-    {
-      title: "Connections",
-      description: "Manage database connections",
-      icon: Database,
-      href: "/dashboard/connections",
-      color: "from-blue-500 to-cyan-500",
-      shortcut: "C"
-    },
-    {
-      title: "Migrations",
-      description: "Create and run migrations",
-      icon: GitBranch,
-      href: "/dashboard/migrations",
-      color: "from-purple-500 to-pink-500",
-      shortcut: "M"
-    },
-    {
-      title: "Workflows",
-      description: "Automate your processes",
-      icon: Workflow,
-      href: "/dashboard/workflows",
-      color: "from-green-500 to-emerald-500",
-      shortcut: "W"
-    },
-    {
-      title: "Monitoring",
-      description: "Track database health",
-      icon: Activity,
-      href: "/dashboard/monitoring",
-      color: "from-orange-500 to-red-500",
-      shortcut: "N"
-    },
-    {
-      title: "Teams",
-      description: "Manage team access",
-      icon: Users,
-      href: "/dashboard/teams",
-      color: "from-indigo-500 to-purple-500",
-      shortcut: "T"
-    },
-    {
-      title: "Audit Logs",
-      description: "View activity history",
-      icon: FileText,
-      href: "/dashboard/audit",
-      color: "from-yellow-500 to-orange-500",
-      shortcut: "A"
-    }
-  ]
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
-      <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-xl px-6 py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <Link href="/dashboard" className="flex items-center space-x-2 group">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span className="text-white font-bold text-sm">DR</span>
-              </div>
-              <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100">DataRoll</span>
-            </Link>
-            <div className="hidden md:flex items-center space-x-1">
-              <Link 
-                href="/dashboard" 
-                className="px-3 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link 
-                href="/dashboard/connections" 
-                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                Connections
-              </Link>
-              <Link 
-                href="/dashboard/migrations" 
-                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                Migrations
-              </Link>
-              <Link 
-                href="/dashboard/workflows" 
-                className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
-              >
-                Workflows
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <KeyboardShortcutsHelp />
-            <ThemeToggle />
-            <Link 
-              href="/profile" 
-              className="px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-            >
-              {session?.user?.name || session?.user?.email || "Profile"}
-            </Link>
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-6 py-12">
-        {/* Welcome Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
-            Welcome back, {session?.user?.name?.split(' ')[0] || 'there'}! 👋
-          </h1>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400">
-            Here's what you can do with DataRoll
-          </p>
-        </div>
-
-        {/* Quick Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {quickLinks.map((link) => {
-            const Icon = link.icon
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="group relative overflow-hidden bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-lg bg-gradient-to-br ${link.color} bg-opacity-10`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-xs font-mono text-zinc-400 dark:text-zinc-600 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded">
-                    {link.shortcut}
-                  </span>
-                </div>
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  {link.title}
-                </h3>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                  {link.description}
-                </p>
-                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-                  Open <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <div className={`absolute inset-0 bg-gradient-to-br ${link.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Additional Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-900 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Settings className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Quick Actions</h3>
-            </div>
-            <div className="space-y-3">
-              <Link 
-                href="/dashboard/connections?new=true" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Add Connection</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link 
-                href="/dashboard/migrations?new=true" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Create Migration</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link 
-                href="/dashboard/workflows?new=true" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">New Workflow</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-900 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-green-600 rounded-lg">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Resources</h3>
-            </div>
-            <div className="space-y-3">
-              <a 
-                href="/test-error-tracking" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Test Error Tracking</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
-              </a>
-              <Link 
-                href="/report-issue" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Report an Issue</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-              <Link 
-                href="/profile" 
-                className="flex items-center justify-between p-3 bg-white dark:bg-zinc-900 rounded-lg hover:shadow-md transition-all group"
-              >
-                <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Account Settings</span>
-                <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-green-600 group-hover:translate-x-1 transition-all" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
 export default function Home() {
   const { data: session, isPending } = useSession()
   const router = useRouter()
@@ -542,8 +289,16 @@ export default function Home() {
     )
   }
 
+  // Show loading state while redirecting to dashboard
   if (session) {
-    return <Dashboard />
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-zinc-100 mx-auto"></div>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return <LandingPage />

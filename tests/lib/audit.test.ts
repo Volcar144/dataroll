@@ -121,4 +121,168 @@ describe('Audit Logging', () => {
       expect(mockCreate).toHaveBeenCalledTimes(actions.length)
     })
   })
+
+  describe('getTeamAuditLogs', () => {
+    it('should return logs with pagination info', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      const mockCount = vi.mocked(prisma.auditLog.count)
+      
+      mockFindMany.mockResolvedValue([
+        { id: 'log1', action: AuditAction.USER_LOGIN },
+        { id: 'log2', action: AuditAction.TEAM_CREATED },
+      ] as any)
+      mockCount.mockResolvedValue(100)
+
+      const { getTeamAuditLogs } = await import('@/lib/audit')
+      const result = await getTeamAuditLogs('team_123', { limit: 10, offset: 0 })
+
+      expect(result.logs).toHaveLength(2)
+      expect(result.total).toBe(100)
+      expect(result.hasMore).toBe(true)
+    })
+
+    it('should filter by action', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      const mockCount = vi.mocked(prisma.auditLog.count)
+      
+      mockFindMany.mockResolvedValue([])
+      mockCount.mockResolvedValue(0)
+
+      const { getTeamAuditLogs } = await import('@/lib/audit')
+      await getTeamAuditLogs('team_123', { action: AuditAction.MIGRATION_EXECUTED })
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          teamId: 'team_123',
+          action: AuditAction.MIGRATION_EXECUTED,
+        }),
+      }))
+    })
+
+    it('should filter by userId', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      const mockCount = vi.mocked(prisma.auditLog.count)
+      
+      mockFindMany.mockResolvedValue([])
+      mockCount.mockResolvedValue(0)
+
+      const { getTeamAuditLogs } = await import('@/lib/audit')
+      await getTeamAuditLogs('team_123', { userId: 'user_456' })
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          teamId: 'team_123',
+          userId: 'user_456',
+        }),
+      }))
+    })
+
+    it('should filter by resource', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      const mockCount = vi.mocked(prisma.auditLog.count)
+      
+      mockFindMany.mockResolvedValue([])
+      mockCount.mockResolvedValue(0)
+
+      const { getTeamAuditLogs } = await import('@/lib/audit')
+      await getTeamAuditLogs('team_123', { resource: 'Migration' })
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          teamId: 'team_123',
+          resource: 'Migration',
+        }),
+      }))
+    })
+
+    it('should use default pagination values', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      const mockCount = vi.mocked(prisma.auditLog.count)
+      
+      mockFindMany.mockResolvedValue([])
+      mockCount.mockResolvedValue(0)
+
+      const { getTeamAuditLogs } = await import('@/lib/audit')
+      await getTeamAuditLogs('team_123')
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        take: 50,
+        skip: 0,
+      }))
+    })
+  })
+
+  describe('getResourceAuditLogs', () => {
+    it('should return logs for a specific resource', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      mockFindMany.mockResolvedValue([
+        { id: 'log1', action: AuditAction.MIGRATION_EXECUTED, resourceId: 'mig_123' },
+      ] as any)
+
+      const { getResourceAuditLogs } = await import('@/lib/audit')
+      const result = await getResourceAuditLogs('team_123', 'Migration', 'mig_123')
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: {
+          teamId: 'team_123',
+          resource: 'Migration',
+          resourceId: 'mig_123',
+        },
+      }))
+      expect(result).toHaveLength(1)
+    })
+  })
+
+  describe('exportAuditLogs', () => {
+    it('should export all logs for a team', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      mockFindMany.mockResolvedValue([
+        { id: 'log1' },
+        { id: 'log2' },
+      ] as any)
+
+      const { exportAuditLogs } = await import('@/lib/audit')
+      const result = await exportAuditLogs('team_123')
+
+      expect(result).toHaveLength(2)
+    })
+
+    it('should filter by date range', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      mockFindMany.mockResolvedValue([])
+
+      const startDate = new Date('2024-01-01')
+      const endDate = new Date('2024-12-31')
+
+      const { exportAuditLogs } = await import('@/lib/audit')
+      await exportAuditLogs('team_123', { startDate, endDate })
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        }),
+      }))
+    })
+
+    it('should filter by action and user', async () => {
+      const mockFindMany = vi.mocked(prisma.auditLog.findMany)
+      mockFindMany.mockResolvedValue([])
+
+      const { exportAuditLogs } = await import('@/lib/audit')
+      await exportAuditLogs('team_123', {
+        action: AuditAction.USER_LOGIN,
+        userId: 'user_456',
+      })
+
+      expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: expect.objectContaining({
+          action: AuditAction.USER_LOGIN,
+          userId: 'user_456',
+        }),
+      }))
+    })
+  })
 })

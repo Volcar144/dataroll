@@ -78,14 +78,17 @@ interface DiffResult {
 interface Migration {
   id: string
   name: string
-  sql: string
+  content: string  // SQL content from the database
   createdAt: string
   status: string
 }
 
 // Parse SQL to extract schema changes
-function parseSQLChanges(sql: string): DiffResult[] {
+function parseSQLChanges(sql: string | undefined | null): DiffResult[] {
   const changes: DiffResult[] = []
+  if (!sql) {
+    return changes
+  }
   const lines = sql.split('\n')
   
   // Patterns for different DDL statements
@@ -269,7 +272,7 @@ function DiffViewerContent() {
 
   useEffect(() => {
     if (selectedMigration) {
-      const changes = parseSQLChanges(selectedMigration.sql)
+      const changes = parseSQLChanges(selectedMigration.content)
       setDiffResults(changes)
     }
   }, [selectedMigration])
@@ -327,8 +330,8 @@ function DiffViewerContent() {
   }, [diffResults, filterType, searchQuery])
 
   const copySQL = () => {
-    if (selectedMigration) {
-      navigator.clipboard.writeText(selectedMigration.sql)
+    if (selectedMigration?.content) {
+      navigator.clipboard.writeText(selectedMigration.content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
@@ -619,7 +622,7 @@ function DiffViewerContent() {
                       <h3 className="font-medium text-gray-900 dark:text-white">{selectedMigration.name}</h3>
                     </div>
                     <pre className="p-4 text-sm font-mono overflow-x-auto max-h-[600px] overflow-y-auto">
-                      {selectedMigration.sql.split('\n').map((line, i) => {
+                      {(selectedMigration.content || '').split('\n').map((line, i) => {
                         const isAdd = line.trim().startsWith('CREATE') || line.trim().startsWith('ADD') || line.trim().startsWith('INSERT')
                         const isDrop = line.trim().startsWith('DROP') || line.trim().startsWith('DELETE')
                         
@@ -649,7 +652,7 @@ function DiffViewerContent() {
                         <h3 className="font-medium text-red-800 dark:text-red-300">Before</h3>
                       </div>
                       <pre className="p-4 text-sm font-mono overflow-x-auto max-h-[500px] overflow-y-auto text-gray-500">
-                        {compareMigration?.sql || '-- Select a previous migration to compare'}
+                        {compareMigration?.content || '-- Select a previous migration to compare'}
                       </pre>
                     </div>
                     
@@ -659,7 +662,7 @@ function DiffViewerContent() {
                         <h3 className="font-medium text-green-800 dark:text-green-300">After</h3>
                       </div>
                       <pre className="p-4 text-sm font-mono overflow-x-auto max-h-[500px] overflow-y-auto text-gray-800 dark:text-gray-200">
-                        {selectedMigration.sql}
+                        {selectedMigration.content || ''}
                       </pre>
                     </div>
                   </div>
