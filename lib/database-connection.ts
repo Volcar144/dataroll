@@ -240,10 +240,8 @@ export class DatabaseConnectionService {
     let client: PostgresClient | null = null
 
     try {
-      // Decrypt password if needed
-      const password = connection.password.startsWith('encrypted:')
-        ? await this.decryptPassword(connection.password)
-        : connection.password
+      // Always attempt to decrypt password (encrypted format is salt:iv:data)
+      const password = await this.decryptPassword(connection.password)
 
       if (connection.url) {
         client = new PostgresClient(connection.url)
@@ -305,10 +303,8 @@ export class DatabaseConnectionService {
     let mysqlConnection: any = null
 
     try {
-      // Decrypt password if needed
-      const password = connection.password.startsWith('encrypted:')
-        ? await this.decryptPassword(connection.password)
-        : connection.password
+      // Always attempt to decrypt password (encrypted format is salt:iv:data)
+      const password = await this.decryptPassword(connection.password)
 
       if (connection.url) {
         mysqlConnection = await mysql.createConnection(connection.url)

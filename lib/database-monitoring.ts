@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { DatabaseConnectionService } from "@/lib/database-connection";
 import { Logger } from "@/lib/telemetry";
+import { decryptCredentials } from "@/lib/encryption";
 
 export interface DatabaseErrorInput {
   connectionId: string;
@@ -79,13 +80,24 @@ export async function performHealthCheck(connectionId: string): Promise<{
       throw new Error("Connection not found");
     }
 
+    // Decrypt password before use
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production'
+    let decryptedPassword: string
+    try {
+      const decrypted = await decryptCredentials(connection.password, ENCRYPTION_KEY)
+      decryptedPassword = decrypted.password
+    } catch {
+      // If decryption fails, assume it might not be encrypted
+      decryptedPassword = connection.password
+    }
+
     const testData = {
       type: connection.type,
       host: connection.host,
       port: connection.port || undefined,
       database: connection.database,
       username: connection.username,
-      password: connection.password,
+      password: decryptedPassword,
       ssl: connection.ssl,
       url: connection.url || undefined,
       connectionId: connection.id,

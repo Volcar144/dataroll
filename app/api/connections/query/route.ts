@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger"
 import { Pool } from "pg"
 import mysql from "mysql2/promise"
 import { AuditAction } from "@prisma/client"
+import { decryptCredentials } from "@/lib/encryption"
 
 // Dangerous SQL patterns that should be blocked for safety
 const DANGEROUS_PATTERNS = [
@@ -165,12 +166,29 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Connection credentials are stored directly (not encrypted for now)
+    // Decrypt connection credentials
+    const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production'
     const host = connection.host
     const port = connection.port || 5432
     const database = connection.database
     const username = connection.username
-    const password = connection.password
+    
+    let password: string
+    try {
+      const decrypted = await decryptCredentials(connection.password, ENCRYPTION_KEY)
+      password = decrypted.password
+    } catch (decryptError) {
+      logger.error({ 
+        msg: 'Failed to decrypt connection password',
+        error: decryptError instanceof Error ? decryptError.message : String(decryptError),
+        connectionId,
+        userId: session.user.id,
+      })
+      return NextResponse.json(
+        { error: { message: "Failed to decrypt connection credentials" } },
+        { status: 500 }
+      )
+    }
     
     // Execute query based on connection type
     let result: { columns: string[]; rows: any[]; rowCount: number }

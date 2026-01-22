@@ -7,6 +7,7 @@ import { createAuditLog } from '@/lib/audit'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import { AuditAction } from '@prisma/client'
+import { decryptCredentials } from '@/lib/encryption'
 
 // Schema for snapshot/metadata request
 const CreateSnapshotSchema = z.object({
@@ -75,13 +76,24 @@ export async function POST(request: NextRequest) {
     // Build connection config if we need to capture pre-state
     let connectionConfig = undefined
     if (validatedData.capturePreState) {
+      // Decrypt the password before use
+      const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production'
+      let decryptedPassword: string
+      try {
+        const decrypted = await decryptCredentials(migration.databaseConnection.password, ENCRYPTION_KEY)
+        decryptedPassword = decrypted.password
+      } catch {
+        // If decryption fails, assume it might not be encrypted
+        decryptedPassword = migration.databaseConnection.password
+      }
+      
       connectionConfig = {
         type: migration.databaseConnection.type as 'POSTGRESQL' | 'MYSQL',
         host: migration.databaseConnection.host,
         port: migration.databaseConnection.port || 5432,
         database: migration.databaseConnection.database,
         username: migration.databaseConnection.username,
-        password: migration.databaseConnection.password,
+        password: decryptedPassword,
         ssl: migration.databaseConnection.ssl,
       }
     }
