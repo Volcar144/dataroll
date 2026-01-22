@@ -161,58 +161,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create initial workflow definition
-    const initialDefinition = WorkflowParser.reconstructDefinition(
-      validatedData.name,
-      validatedData.description || undefined,
-      validatedData.trigger,
-      [],
-      JSON.stringify([]), // Empty nodes
-      JSON.stringify([]), // Empty edges
-    );
+    // Use a transaction to handle the circular dependency between Workflow and WorkflowDefinition
+    const result = await prisma.$transaction(async (tx) => {
+      // First, create the workflow with a temporary definitionId
+      // We'll use a placeholder that we'll update later
+      const tempDefinitionId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Create the workflow first
+      const workflow = await tx.workflow.create({
+        data: {
+          teamId: validatedData.teamId,
+          name: validatedData.name,
+          description: validatedData.description,
+          trigger: validatedData.trigger,
+          definitionId: tempDefinitionId,
+          createdBy: session.user.id,
+        },
+      });
 
-    const definition = await prisma.workflowDefinition.create({
-      data: {
-        workflowId: '', // Will be set after workflow creation
-        content: WorkflowParser.stringify(initialDefinition),
-        format: 'json',
-        nodes: JSON.stringify([]),
-        edges: JSON.stringify([]),
-        version: 1,
-        createdBy: session.user.id,
-      },
-    });
+      // Create initial workflow definition
+      const initialDefinition = WorkflowParser.reconstructDefinition(
+        validatedData.name,
+        validatedData.description || undefined,
+        validatedData.trigger,
+        [],
+        JSON.stringify([]), // Empty nodes
+        JSON.stringify([]), // Empty edges
+      );
 
-    // Create workflow
-    const workflow = await prisma.workflow.create({
-      data: {
-        ...validatedData,
-        definitionId: definition.id,
-        createdBy: session.user.id,
-      },
-    });
+      // Create the definition with the actual workflow ID
+      const definition = await tx.workflowDefinition.create({
+        data: {
+          workflowId: workflow.id,
+          content: WorkflowParser.stringify(initialDefinition),
+          format: 'json',
+          nodes: JSON.stringify([]),
+          edges: JSON.stringify([]),
+          version: 1,
+          createdBy: session.user.id,
+        },
+      });
 
-    // Update definition with correct workflow ID
-    await prisma.workflowDefinition.update({
-      where: { id: definition.id },
-      data: { workflowId: workflow.id },
+      // Update workflow with the actual definition ID
+      const updatedWorkflow = await tx.workflow.update({
+        where: { id: workflow.id },
+        data: { definitionId: definition.id },
+      });
+
+      return updatedWorkflow;
     });
 
     logger.info('Workflow created', {
-      workflowId: workflow.id,
+      workflowId: result.id,
       teamId: validatedData.teamId,
       userId: session.user.id,
     });
 
     return NextResponse.json({
       data: {
-        id: workflow.id,
-        name: workflow.name,
-        description: workflow.description,
-        trigger: workflow.trigger,
-        isPublished: workflow.isPublished,
-        version: workflow.version,
-        createdAt: workflow.createdAt,
+        id: result.id,
+        name: result.name,
+        description: result.description,
+        trigger: result.trigger,
+        isPublished: result.isPublished,
+        version: result.version,
+        createdAt: result.createdAt,
       },
     }, { status: 201 });
 

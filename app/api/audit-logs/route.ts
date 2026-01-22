@@ -87,6 +87,12 @@ export async function GET(request: NextRequest) {
             image: true,
           },
         },
+        team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
         [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc',
@@ -161,6 +167,12 @@ export async function POST(request: NextRequest) {
             name: true,
             email: true,
             image: true,
+          },
+        },
+        team: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },

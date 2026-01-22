@@ -19,9 +19,9 @@ interface AuditLog {
     name: string | null
     email: string
   }
-  team: {
+  team?: {
     name: string
-  }
+  } | null
 }
 
 export default function AuditPage() {
@@ -124,7 +124,7 @@ export default function AuditPage() {
   const exportAuditLogs = () => {
     const csv = ['Action,Resource,User,Team,IP Address,Timestamp']
     auditLogs.forEach(log => {
-      csv.push(`"${log.action}","${log.resource}","${log.user.name || log.user.email}","${log.team.name}","${log.ipAddress || 'N/A'}","${log.createdAt}"`)
+      csv.push(`"${log.action}","${log.resource}","${log.user.name || log.user.email}","${log.team?.name || 'N/A'}","${log.ipAddress || 'N/A'}","${log.createdAt}"`)
     })
     const element = document.createElement('a')
     element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv.join('\n')))
@@ -352,9 +352,11 @@ export default function AuditPage() {
                           <span className="inline-flex items-center gap-1">
                             👤 {log.user.name || log.user.email}
                           </span>
-                          <span className="inline-flex items-center gap-1">
-                            🏢 {log.team.name}
-                          </span>
+                          {log.team?.name && (
+                            <span className="inline-flex items-center gap-1">
+                              🏢 {log.team.name}
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1">
                             📅 {new Date(log.createdAt).toLocaleString()}
                           </span>
