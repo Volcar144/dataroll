@@ -128,7 +128,7 @@ export class DatabaseConnectionService {
           database: data.database,
           user: data.username,
           password: data.password,
-          ssl: data.ssl,
+          ssl: data.ssl ? { rejectUnauthorized: false } : false,
           connectionTimeoutMillis: 5000,
         })
       }
@@ -252,7 +252,7 @@ export class DatabaseConnectionService {
           database: connection.database,
           user: connection.username,
           password,
-          ssl: connection.ssl,
+          ssl: connection.ssl ? { rejectUnauthorized: false } : false,
         })
       }
 
@@ -459,7 +459,7 @@ export class DatabaseConnectionService {
           database: data.database,
           user: data.username,
           password: data.password,
-          ssl: data.ssl,
+          ssl: data.ssl ? { rejectUnauthorized: false } : false,
         })
       }
 

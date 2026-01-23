@@ -40,11 +40,11 @@ export class ActionExecutor implements NodeExecutor {
           break;
 
         case 'dry_run':
-          result = await this.dryRun(nodeData, context);
+          result = await this.dryRun(nodeData, context, previousOutput);
           break;
 
         case 'execute_migrations':
-          result = await this.executeMigrations(nodeData, context);
+          result = await this.executeMigrations(nodeData, context, previousOutput);
           break;
 
         case 'rollback':
@@ -117,9 +117,8 @@ export class ActionExecutor implements NodeExecutor {
         if (!nodeData.connectionId) {
           errors.push('Connection ID is required');
         }
-        if (!nodeData.migrations) {
-          errors.push('Migrations are required');
-        }
+        // Migrations can come from node data OR from previous output (e.g., discover_migrations)
+        // So we don't require it at validation time
         break;
 
       case 'rollback':
@@ -225,15 +224,32 @@ export class ActionExecutor implements NodeExecutor {
 
   private async dryRun(
     nodeData: ActionNodeData,
-    context: ExecutionContext
+    context: ExecutionContext,
+    previousOutput?: any
   ): Promise<any> {
     const connectionId = nodeData.connectionId || context.connectionId;
     if (!connectionId) {
       throw new Error('Database connection ID is required');
     }
 
-    if (!nodeData.migrations || !Array.isArray(nodeData.migrations)) {
-      throw new Error('Migrations array is required for dry run');
+    // Try to get migrations from node data, or from previous output (e.g., from discover_migrations node)
+    let migrations = nodeData.migrations;
+    if (!migrations || !Array.isArray(migrations)) {
+      // Check if previous output contains migrations (from discover_migrations or other source)
+      if (previousOutput && typeof previousOutput === 'object') {
+        // Check for migrations in the most recent output
+        const lastOutputKey = Object.keys(previousOutput).pop();
+        const lastOutput = lastOutputKey ? previousOutput[lastOutputKey] : null;
+        if (lastOutput?.migrations && Array.isArray(lastOutput.migrations)) {
+          migrations = lastOutput.migrations;
+        } else if (lastOutput?.discoveredMigrations && Array.isArray(lastOutput.discoveredMigrations)) {
+          migrations = lastOutput.discoveredMigrations;
+        }
+      }
+    }
+
+    if (!migrations || !Array.isArray(migrations)) {
+      throw new Error('Migrations array is required for dry run. Configure migrations in the node or connect a discover_migrations node.');
     }
 
     // Get database connection
@@ -246,26 +262,43 @@ export class ActionExecutor implements NodeExecutor {
     }
 
     // Perform actual dry-run of migrations
-    const dryRunResult = await this.performMigrationDryRun(nodeData.migrations, connection);
+    const dryRunResult = await this.performMigrationDryRun(migrations, connection);
 
     return {
       dryRunResult,
       connectionId,
-      migrations: nodeData.migrations,
+      migrations,
     };
   }
 
   private async executeMigrations(
     nodeData: ActionNodeData,
-    context: ExecutionContext
+    context: ExecutionContext,
+    previousOutput?: any
   ): Promise<any> {
     const connectionId = nodeData.connectionId || context.connectionId;
     if (!connectionId) {
       throw new Error('Database connection ID is required');
     }
 
-    if (!nodeData.migrations || !Array.isArray(nodeData.migrations)) {
-      throw new Error('Migrations array is required for execution');
+    // Try to get migrations from node data, or from previous output (e.g., from discover_migrations node)
+    let migrations = nodeData.migrations;
+    if (!migrations || !Array.isArray(migrations)) {
+      // Check if previous output contains migrations (from discover_migrations or other source)
+      if (previousOutput && typeof previousOutput === 'object') {
+        // Check for migrations in the most recent output
+        const lastOutputKey = Object.keys(previousOutput).pop();
+        const lastOutput = lastOutputKey ? previousOutput[lastOutputKey] : null;
+        if (lastOutput?.migrations && Array.isArray(lastOutput.migrations)) {
+          migrations = lastOutput.migrations;
+        } else if (lastOutput?.discoveredMigrations && Array.isArray(lastOutput.discoveredMigrations)) {
+          migrations = lastOutput.discoveredMigrations;
+        }
+      }
+    }
+
+    if (!migrations || !Array.isArray(migrations)) {
+      throw new Error('Migrations array is required for execution. Configure migrations in the node or connect a discover_migrations node.');
     }
 
     // Get database connection
@@ -278,12 +311,12 @@ export class ActionExecutor implements NodeExecutor {
     }
 
     // Execute the actual migrations
-    const executionResult = await this.performMigrationExecution(nodeData.migrations, connection);
+    const executionResult = await this.performMigrationExecution(migrations, connection);
 
     return {
       executionResult,
       connectionId,
-      migrations: nodeData.migrations,
+      migrations,
     };
   }
 

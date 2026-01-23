@@ -202,6 +202,9 @@ export class WorkflowEngine {
   ): Promise<void> {
     const startTime = Date.now();
 
+    // Ensure executionId is set in context
+    context.executionId = executionId;
+
     try {
       // Get execution order
       const executionOrder = WorkflowParser.getExecutionOrder(definition.nodes, definition.edges);
