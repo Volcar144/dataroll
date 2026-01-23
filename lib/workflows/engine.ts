@@ -44,6 +44,35 @@ export interface ValidationResult {
 export class WorkflowEngine {
   private static executors: Map<string, NodeExecutor> = new Map();
 
+  // Map specific node types to their base executor type
+  private static nodeTypeMapping: Map<string, string> = new Map([
+    // Database operations - map to action executor
+    ['discoverMigrations', 'action'],
+    ['dryRun', 'action'],
+    ['executeMigrations', 'action'],
+    ['rollback', 'action'],
+    ['databaseQuery', 'action'],
+    // Integration operations - map to action executor
+    ['httpRequest', 'action'],
+    ['shellCommand', 'action'],
+    // Data operations - map to action executor
+    ['transformData', 'action'],
+    ['setVariable', 'action'],
+  ]);
+
+  // Map node types to their action names for the action executor
+  private static nodeTypeToAction: Map<string, string> = new Map([
+    ['discoverMigrations', 'discover_migrations'],
+    ['dryRun', 'dry_run'],
+    ['executeMigrations', 'execute_migrations'],
+    ['rollback', 'rollback'],
+    ['databaseQuery', 'database_query'],
+    ['httpRequest', 'http_request'],
+    ['shellCommand', 'shell_command'],
+    ['transformData', 'transform_data'],
+    ['setVariable', 'set_variable'],
+  ]);
+
   static {
     // Register node executors
     this.executors.set('action', new ActionExecutor());
@@ -51,6 +80,41 @@ export class WorkflowEngine {
     this.executors.set('approval', new ApprovalExecutor());
     this.executors.set('notification', new NotificationExecutor());
     this.executors.set('delay', new DelayExecutor());
+  }
+
+  /**
+   * Get the executor for a node type, handling type mappings
+   */
+  private static getExecutor(nodeType: string): NodeExecutor | undefined {
+    // First check if there's a direct executor
+    let executor = this.executors.get(nodeType);
+    if (executor) return executor;
+
+    // Check if there's a mapping to another executor type
+    const mappedType = this.nodeTypeMapping.get(nodeType);
+    if (mappedType) {
+      executor = this.executors.get(mappedType);
+    }
+
+    return executor;
+  }
+
+  /**
+   * Prepare node data for execution, mapping node types to action names
+   */
+  private static prepareNodeForExecution(node: any): any {
+    const actionName = this.nodeTypeToAction.get(node.type);
+    if (actionName) {
+      // Map the specific node type to an action
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          action: actionName,
+        },
+      };
+    }
+    return node;
   }
 
   /**
@@ -154,6 +218,27 @@ export class WorkflowEngine {
       const nodeOutputs: Record<string, any> = {};
 
       for (const node of executionOrder) {
+        // Skip trigger nodes - they are entry points, not executable actions
+        if (node.type === 'trigger') {
+          // Mark trigger as successful without execution
+          await prisma.nodeExecution.create({
+            data: {
+              executionId,
+              nodeId: node.id,
+              nodeType: node.type,
+              nodeName: node.label || 'Trigger',
+              status: 'success',
+              input: JSON.stringify({}),
+              output: JSON.stringify({ triggered: true, triggeredAt: new Date().toISOString() }),
+              duration: 0,
+              startedAt: new Date(),
+              completedAt: new Date(),
+            }
+          });
+          nodeOutputs[node.id] = { triggered: true };
+          continue;
+        }
+
         const nodeStartTime = Date.now();
 
         try {
@@ -169,15 +254,18 @@ export class WorkflowEngine {
             }
           });
 
-          // Get executor for node type
-          const executor = this.executors.get(node.type);
+          // Get executor for node type (handles type mappings)
+          const executor = this.getExecutor(node.type);
           if (!executor) {
             throw new Error(`No executor found for node type: ${node.type}`);
           }
 
+          // Prepare node for execution (map specific types to action names)
+          const preparedNode = this.prepareNodeForExecution(node);
+
           // Execute node
           const result = await executor.execute(
-            VariableEngine.resolveObject(node, variableContext),
+            VariableEngine.resolveObject(preparedNode, variableContext),
             context,
             nodeOutputs
           );
