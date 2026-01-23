@@ -12,18 +12,31 @@ export class ApprovalExecutor implements NodeExecutor {
     const nodeData = node.data as ApprovalNodeData;
 
     try {
-      // Create approval request
+      // Validate required context
+      if (!context.executionId) {
+        throw new Error('Execution ID is required for approval nodes');
+      }
+
+      // Calculate timeout with fallback (timeout is in seconds)
+      const timeoutSeconds = nodeData.timeout || 3600; // Default 1 hour
+      const timeoutMinutes = Math.floor(timeoutSeconds / 60) || 60;
+
+      // Create approval request using proper Prisma relations
       const approval = await prisma.workflowApproval.create({
         data: {
-          workflowId: context.workflowId,
-          executionId: context.executionId,
+          workflow: {
+            connect: { id: context.workflowId }
+          },
+          execution: {
+            connect: { id: context.executionId }
+          },
           nodeId: node.id,
-          nodeName: node.label,
-          approvers: nodeData.approvers,
+          nodeName: node.label || 'Approval',
+          approvers: nodeData.approvers || [],
           approvalType: nodeData.requireAll ? 'unanimous' : 'any',
-          requiredApprovals: nodeData.requireAll ? nodeData.approvers.length : 1,
-          timeoutMinutes: Math.floor(nodeData.timeout / 60), // Convert seconds to minutes
-          message: nodeData.message,
+          requiredApprovals: nodeData.requireAll ? (nodeData.approvers?.length || 1) : 1,
+          timeoutMinutes: timeoutMinutes,
+          message: nodeData.message || '',
           context: JSON.stringify({
             previousOutput,
             variables: context.variables,
