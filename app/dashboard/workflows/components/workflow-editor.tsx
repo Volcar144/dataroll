@@ -903,7 +903,10 @@ export default function WorkflowEditor({
       // Convert nodes/edges to the format expected by the API
       const workflowNodes = nodes.map(node => ({
         id: node.id,
-        type: node.type === 'trigger' ? 'trigger' : 'action',
+        // Preserve special node types that have dedicated executors
+        type: ['trigger', 'condition', 'approval', 'notification', 'delay'].includes(node.type || '')
+          ? node.type
+          : 'action',
         label: String(node.data?.label || ''),
         position: node.position,
         data: {

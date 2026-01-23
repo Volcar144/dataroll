@@ -3,6 +3,24 @@ import { ActionNodeData } from '../types';
 import { prisma } from '@/lib/prisma';
 
 export class ActionExecutor implements NodeExecutor {
+  // Map camelCase action names to snake_case
+  private static actionNameMap: Record<string, string> = {
+    'discoverMigrations': 'discover_migrations',
+    'dryRun': 'dry_run',
+    'executeMigrations': 'execute_migrations',
+    'databaseQuery': 'database_query',
+    'databaseMigration': 'database_migration',
+    'httpRequest': 'http_request',
+    'shellCommand': 'shell_command',
+    'setVariable': 'set_variable',
+    'transformData': 'transform_data',
+    'customApiCall': 'custom_api_call',
+  };
+
+  private normalizeActionName(action: string): string {
+    return ActionExecutor.actionNameMap[action] || action;
+  }
+
   async execute(
     node: any,
     context: ExecutionContext,
@@ -13,8 +31,10 @@ export class ActionExecutor implements NodeExecutor {
 
     try {
       let result: any;
+      // Normalize action name to handle both camelCase and snake_case
+      const action = this.normalizeActionName(nodeData.action);
 
-      switch (nodeData.action) {
+      switch (action) {
         case 'discover_migrations':
           result = await this.discoverMigrations(nodeData, context);
           break;
