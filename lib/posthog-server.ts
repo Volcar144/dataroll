@@ -30,7 +30,7 @@ export async function captureServerException(
 ) {
   const posthog = getPostHogClient();
   
-  await posthog.capture({
+  await posthog.captureException({
     distinctId: distinctId || 'unknown',
     event: 'exception',
     properties: {
