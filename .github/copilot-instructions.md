@@ -113,11 +113,12 @@ BETTER_AUTH_URL="http://localhost:3000"  # or production URL
 # Encryption (CRITICAL for production - used for database credentials)
 ENCRYPTION_KEY="..."
 
-# Optional: Logging & Monitoring
-LOGFLARE_API_KEY="..."
-POSTHOG_API_KEY="..."  # Personal API key (phx_...)
+# Optional: Logging & Monitoring (OpenTelemetry)
+LOGFLARE_API_KEY="..."        # Logflare access token
+LOGFLARE_SOURCE_ID="..."      # Logflare source UUID for OTLP
+POSTHOG_API_KEY="..."         # Personal API key (phx_...)
 POSTHOG_ENV_ID="..."
-NEXT_PUBLIC_POSTHOG_KEY="..."
+NEXT_PUBLIC_POSTHOG_KEY="..." # Project API key for logs/events
 NEXT_PUBLIC_POSTHOG_HOST="https://eu.i.posthog.com"
 
 # Optional: OAuth providers (Google, GitHub, Discord)
