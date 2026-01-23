@@ -8,6 +8,11 @@ import { sendPasswordResetEmail } from "@/lib/email"
 const betterAuthBaseUrl = (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://fun-five-psi.vercel.app").replace(/\/+$/, "")
 const betterAuthHost = betterAuthBaseUrl.replace(/^https?:\/\//, "").split("/")[0]
 
+// Validate required environment variables
+if (!process.env.BETTER_AUTH_SECRET) {
+  console.error('[AUTH] CRITICAL: BETTER_AUTH_SECRET is not set!')
+}
+
 // Initialize BetterAuth with comprehensive configuration
 export const auth = betterAuth({
     appName: "dataroll",

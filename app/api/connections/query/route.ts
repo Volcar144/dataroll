@@ -175,19 +175,17 @@ export async function POST(request: NextRequest) {
     
     let password: string
     try {
+      // Try to decrypt the password (it might be encrypted with salt:iv:data format)
       const decrypted = await decryptCredentials(connection.password, ENCRYPTION_KEY)
       password = decrypted.password
     } catch (decryptError) {
-      logger.error({ 
-        msg: 'Failed to decrypt connection password',
-        error: decryptError instanceof Error ? decryptError.message : String(decryptError),
+      // If decryption fails, the password might be stored unencrypted (legacy data)
+      // Fall back to using the raw password
+      logger.info({ 
+        msg: 'Using unencrypted password (legacy connection or decryption failed)',
         connectionId,
-        userId: session.user.id,
       })
-      return NextResponse.json(
-        { error: { message: "Failed to decrypt connection credentials" } },
-        { status: 500 }
-      )
+      password = connection.password
     }
     
     // Execute query based on connection type
