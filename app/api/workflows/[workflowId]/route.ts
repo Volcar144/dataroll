@@ -200,6 +200,7 @@ export async function PUT(
           description: validatedData.description,
           trigger: validatedData.trigger,
           tags: validatedData.tags,
+          isPublished: validatedData.isPublished,
           version: { increment: 1 },
         },
       });

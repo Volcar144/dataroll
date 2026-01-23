@@ -700,6 +700,8 @@ export default function WorkflowEditor({
   const [workflowDescription, setWorkflowDescription] = useState(initialDescription)
   const [trigger, setTrigger] = useState(initialTrigger)
   const [saving, setSaving] = useState(false)
+  const [running, setRunning] = useState(false)
+  const [isPublished, setIsPublished] = useState(false)
   const [loading, setLoading] = useState(true)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [showNodePanel, setShowNodePanel] = useState(true)
@@ -771,6 +773,7 @@ export default function WorkflowEditor({
             setWorkflowName(workflow.name)
             setWorkflowDescription(workflow.description || '')
             setTrigger(workflow.trigger)
+            setIsPublished(workflow.isPublished || false)
             if (workflow.teamId) {
               setCurrentTeamId(workflow.teamId)
             }
@@ -884,7 +887,7 @@ export default function WorkflowEditor({
   )
 
   // Save workflow
-  const saveWorkflow = async () => {
+  const saveWorkflow = async (publish: boolean = false) => {
     if (!workflowName.trim()) {
       alert('Please enter a workflow name')
       return
@@ -928,13 +931,19 @@ export default function WorkflowEditor({
           trigger,
           nodes: workflowNodes,
           edges: workflowEdges,
+          isPublished: publish || isPublished,
         }),
       })
 
       const result = await response.json()
 
       if (result.data?.id || result.success) {
-        router.push('/dashboard/workflows')
+        if (publish) {
+          setIsPublished(true)
+          alert('Workflow saved and published! You can now run it.')
+        } else {
+          router.push('/dashboard/workflows')
+        }
       } else {
         alert(result.error?.message || 'Failed to save workflow')
       }
@@ -943,6 +952,52 @@ export default function WorkflowEditor({
       alert('Error saving workflow')
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Run workflow (manual trigger)
+  const runWorkflow = async () => {
+    if (!workflowId) {
+      alert('Please save the workflow first')
+      return
+    }
+
+    if (trigger !== 'manual') {
+      alert('Only workflows with manual triggers can be run directly')
+      return
+    }
+
+    if (!isPublished) {
+      const shouldPublish = confirm('This workflow needs to be published before it can run. Would you like to save and publish it now?')
+      if (shouldPublish) {
+        await saveWorkflow(true)
+        return
+      }
+      return
+    }
+
+    setRunning(true)
+    try {
+      const response = await fetch(`/api/workflows/${workflowId}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.data?.executionId) {
+        alert(`Workflow started! Execution ID: ${result.data.executionId}`)
+        // Optionally navigate to execution details
+        router.push(`/dashboard/workflows/${workflowId}/executions`)
+      } else {
+        alert(result.error?.message || 'Failed to run workflow')
+      }
+    } catch (error) {
+      console.error('Failed to run workflow:', error)
+      alert('Error running workflow')
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -1021,8 +1076,24 @@ export default function WorkflowEditor({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Run button - only for existing workflows with manual trigger */}
+          {workflowId && trigger === 'manual' && (
+            <button
+              onClick={runWorkflow}
+              disabled={running || saving}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                isPublished
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-zinc-200 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600'
+              }`}
+              title={isPublished ? 'Run workflow' : 'Save and publish to enable running'}
+            >
+              <Play className="h-4 w-4" />
+              {running ? 'Running...' : isPublished ? 'Run' : 'Run (Publish first)'}
+            </button>
+          )}
           <button
-            onClick={saveWorkflow}
+            onClick={() => saveWorkflow(false)}
             disabled={saving}
             className="flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
           >

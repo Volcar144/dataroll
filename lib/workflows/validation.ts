@@ -118,6 +118,7 @@ export const UpdateWorkflowSchema = z.object({
   description: z.string().optional(),
   trigger: z.enum(['manual', 'scheduled', 'webhook', 'event']).optional(),
   tags: z.array(z.string()).optional(),
+  isPublished: z.boolean().optional(),
 });
 
 export const ExecuteWorkflowSchema = z.object({
